@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOC Analyzer v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:     #080a0d;
+  --s1:     #0e1117;
+  --s2:     #141820;
+  --s3:     #1a2030;
+  --b1:     #1e2736;
+  --b2:     #28364a;
+  --text:   #dde4f0;
+  --muted:  #546e8a;
+  --dim:    #2d3f55;
+  --cyan:   #00e5ff;
+  --cyan2:  #00b8cc;
+  --green:  #1af5a0;
+  --amber:  #ffb930;
+  --red:    #ff5252;
+  --purple: #b388ff;
+  --shadow: rgba(0,0,0,0.5);
+}
+[data-theme="light"] {
+  --bg:     #f0f4f8;
+  --s1:     #ffffff;
+  --s2:     #f5f7fa;
+  --s3:     #eaeff5;
+  --b1:     #d1dbe8;
+  --b2:     #b8c8da;
+  --text:   #1a2535;
+  --muted:  #6b86a0;
+  --dim:    #c0cedc;
+  --cyan:   #0095b3;
+  --cyan2:  #007a96;
+  --green:  #0d9e68;
+  --amber:  #c47d00;
+  --red:    #d63030;
+  --purple: #7c4dcc;
+  --shadow: rgba(0,0,0,0.12);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .3s,color .3s;}
+
+/* grid overlay – dark only */
+[data-theme="dark"] body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,229,255,.022) 40px),
+             repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,229,255,.022) 40px);
+  pointer-events:none;z-index:0;
+}
+[data-theme="light"] body::before{display:none;}
+
+.wrap{max-width:960px;margin:0 auto;padding:2rem 1.25rem 5rem;position:relative;z-index:1;}
+
+/* ── TYPOGRAPHY HELPERS ─── */
+.mono{font-family:'Space Mono',monospace;}
+.label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);}
+.muted{color:var(--muted);}
+
+/* ── HEADER ─────────────────────────────────────── */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;gap:12px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:14px;}
+.brand-mark{width:42px;height:42px;border:1px solid var(--cyan2);border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,229,255,.1),transparent);}
+[data-theme="light"] .brand-mark{background:linear-gradient(135deg,rgba(0,149,179,.12),transparent);}
+.brand-mark svg{width:20px;height:20px;stroke:var(--cyan);fill:none;stroke-width:1.5;}
+.brand-name{font-size:17px;font-weight:700;letter-spacing:.08em;}
+.brand-tag{font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:.14em;margin-top:2px;}
+
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.live-pill{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;padding:5px 12px;border-radius:20px;border:1px solid rgba(26,245,160,.3);color:var(--green);display:flex;align-items:center;gap:6px;}
+[data-theme="light"] .live-pill{border-color:rgba(13,158,104,.3);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* theme toggle */
+.theme-btn{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);transition:all .2s;}
+.theme-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.theme-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;}
+
+/* ── TABS ────────────────────────────────────────── */
+.tabs{display:flex;gap:2px;margin-bottom:1.5rem;background:var(--s1);border-radius:10px;padding:4px;border:1px solid var(--b1);}
+.tab{flex:1;text-align:center;padding:9px 6px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.07em;color:var(--muted);cursor:pointer;border-radius:7px;transition:all .2s;position:relative;white-space:nowrap;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--s3);color:var(--cyan);border:1px solid var(--b2);}
+.tab .badge{position:absolute;top:4px;right:6px;background:var(--cyan);color:#000;border-radius:10px;font-size:9px;padding:1px 5px;font-weight:700;min-width:16px;text-align:center;}
+
+/* ── CARDS / SURFACES ────────────────────────────── */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:1rem 1.25rem;transition:background .3s,border-color .3s;}
+.card+.card{margin-top:10px;}
+.instr{background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.14);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;}
+[data-theme="light"] .instr{background:rgba(0,149,179,.05);border-color:rgba(0,149,179,.2);}
+
+/* ── INPUT AREA ──────────────────────────────────── */
+.input-card{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
+.input-row{display:flex;gap:8px;}
+.ioc-field{flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:13px 16px;font-family:'Space Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;}
+.ioc-field::placeholder{color:var(--muted);}
+.ioc-field:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px rgba(0,229,255,.07);}
+[data-theme="light"] .ioc-field:focus{box-shadow:0 0 0 3px rgba(0,149,179,.1);}
+.run-btn{background:var(--cyan);color:#000;border:none;border-radius:9px;padding:13px 20px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.07em;cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.run-btn:hover{filter:brightness(1.1);}
+.run-btn:active{transform:scale(.97);}
+.run-btn:disabled{background:var(--dim);color:var(--muted);cursor:not-allowed;}
+.detect-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.type-pill{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;padding:3px 10px;border-radius:20px;border:1px solid var(--b2);color:var(--muted);cursor:pointer;transition:all .15s;}
+.type-pill.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.07);}
+.detect-msg{font-family:'Space Mono',monospace;font-size:10px;color:var(--green);letter-spacing:.05em;}
+
+/* ── BULK INPUT ───────────────────────────────────── */
+.bulk-toggle{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.07em;color:var(--muted);background:none;border:1px solid var(--b1);border-radius:6px;padding:4px 10px;cursor:pointer;margin-top:8px;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.bulk-toggle:hover{border-color:var(--cyan2);color:var(--cyan2);}
+.bulk-area{display:none;margin-top:10px;}
+.bulk-area.on{display:block;}
+.bulk-field{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:12px 16px;font-family:'Space Mono',monospace;font-size:12px;color:var(--text);outline:none;resize:vertical;min-height:90px;transition:border-color .2s;}
+.bulk-field:focus{border-color:var(--cyan2);}
+.bulk-hint{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;}
+.bulk-run-btn{background:var(--purple);color:#000;border:none;border-radius:8px;padding:10px 18px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.07em;cursor:pointer;margin-top:8px;transition:filter .15s;}
+.bulk-run-btn:hover{filter:brightness(1.1);}
+
+/* ── SOURCES ─────────────────────────────────────── */
+.sources-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.sources-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px;}
+.src-chip{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--text);opacity:.45;transition:all .2s;}
+.src-chip.on {opacity:1;border-color:var(--b2);}
+.src-chip.q  {opacity:1;border-color:var(--amber);color:var(--amber);animation:blink .7s ease-in-out infinite;}
+.src-chip.ok {opacity:1;border-color:rgba(26,245,160,.5);color:var(--green);}
+.src-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── PROGRESS ────────────────────────────────────── */
+.prog-wrap{margin-bottom:1.25rem;display:none;}
+.prog-wrap.on{display:block;}
+.prog-track{height:2px;background:var(--b1);border-radius:2px;overflow:hidden;margin-bottom:7px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;width:0%;transition:width .35s ease;}
+.prog-msg{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.05em;}
+
+/* ── VERDICT ─────────────────────────────────────── */
+.verdict{border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:16px;border:1px solid;}
+.verdict.mal{background:rgba(255,82,82,.06);border-color:rgba(255,82,82,.25);}
+.verdict.sus{background:rgba(255,185,48,.06);border-color:rgba(255,185,48,.25);}
+.verdict.cln{background:rgba(26,245,160,.06);border-color:rgba(26,245,160,.25);}
+.verdict.unk{background:rgba(84,110,138,.08);border-color:rgba(84,110,138,.25);}
+.v-icon{font-size:30px;flex-shrink:0;}
+.v-label{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;letter-spacing:.04em;}
+.verdict.mal .v-label{color:var(--red);}
+.verdict.sus .v-label{color:var(--amber);}
+.verdict.cln .v-label{color:var(--green);}
+.verdict.unk .v-label{color:var(--muted);}
+.v-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;}
+.v-score{margin-left:auto;text-align:right;flex-shrink:0;}
+.v-num{font-family:'Space Mono',monospace;font-size:36px;font-weight:700;line-height:1;}
+.verdict.mal .v-num{color:var(--red);}
+.verdict.sus .v-num{color:var(--amber);}
+.verdict.cln .v-num{color:var(--green);}
+.verdict.unk .v-num{color:var(--muted);}
+.v-unit{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;margin-top:3px;}
+
+/* animated score counter */
+@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.v-num{animation:countUp .5s ease forwards;}
+
+/* ── RISK GAUGE ──────────────────────────────────── */
+.gauge-wrap{display:flex;align-items:center;gap:20px;padding:1rem 0 .5rem;}
+.gauge-svg{flex-shrink:0;}
+.gauge-labels{display:flex;flex-direction:column;gap:6px;}
+.gauge-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.gauge-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.gauge-val{font-family:'Space Mono',monospace;font-size:11px;color:var(--text);}
+
+/* ── TWO COL ─────────────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+@media(max-width:580px){.two-col{grid-template-columns:1fr;}}
+.kv{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--b1);gap:10px;}
+.kv:last-child{border-bottom:none;}
+.kk{font-size:12px;color:var(--muted);min-width:90px;flex-shrink:0;}
+.kv-val{font-family:'Space Mono',monospace;font-size:11px;color:var(--text);text-align:right;word-break:break-all;}
+
+/* ── FINDINGS ────────────────────────────────────── */
+.findings-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;}
+.finding{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--b1);align-items:flex-start;}
+.finding:last-child{border-bottom:none;}
+.f-badge{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;flex-shrink:0;margin-top:3px;letter-spacing:.07em;}
+.f-hi{background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3);}
+.f-me{background:rgba(255,185,48,.12);color:var(--amber);border:1px solid rgba(255,185,48,.3);}
+.f-lo{background:rgba(26,245,160,.1);color:var(--green);border:1px solid rgba(26,245,160,.3);}
+.f-in{background:rgba(179,136,255,.1);color:var(--purple);border:1px solid rgba(179,136,255,.3);}
+.f-txt{font-size:13px;line-height:1.55;}
+.f-src{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* ── SOURCE TABLE ────────────────────────────────── */
+.src-table{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+.src-table-head{padding:9px 1.25rem;background:var(--s2);border-bottom:1px solid var(--b1);font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;}
+.src-row{display:flex;align-items:flex-start;padding:10px 1.25rem;border-bottom:1px solid var(--b1);gap:12px;flex-wrap:wrap;}
+.src-row:last-child{border-bottom:none;}
+.src-name-col{min-width:130px;font-size:13px;font-weight:500;flex-shrink:0;}
+.src-badge{font-family:'Space Mono',monospace;font-size:10px;padding:2px 9px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+.sb-mal{background:rgba(255,82,82,.12);color:var(--red);}
+.sb-sus{background:rgba(255,185,48,.12);color:var(--amber);}
+.sb-cln{background:rgba(26,245,160,.1);color:var(--green);}
+.sb-unk{background:rgba(84,110,138,.1);color:var(--muted);}
+.src-detail-txt{font-size:12px;color:var(--muted);flex:1;min-width:120px;line-height:1.5;}
+
+/* ── TIMELINE ────────────────────────────────────── */
+.timeline{position:relative;padding-left:24px;margin-top:4px;}
+.timeline::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--b2);}
+.tl-item{position:relative;margin-bottom:14px;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-dot{position:absolute;left:-24px;top:4px;width:10px;height:10px;border-radius:50%;border:2px solid var(--s1);flex-shrink:0;}
+.tl-dot.red{background:var(--red);}
+.tl-dot.amb{background:var(--amber);}
+.tl-dot.grn{background:var(--green);}
+.tl-dot.cyn{background:var(--cyan);}
+.tl-dot.pur{background:var(--purple);}
+.tl-date{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:2px;}
+.tl-title{font-size:13px;font-weight:500;line-height:1.4;}
+.tl-detail{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;}
+.tl-source{font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan2);margin-top:3px;}
+
+/* ── MITRE ───────────────────────────────────────── */
+.mitre-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:4px;}
+.mitre-card{background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:10px 12px;transition:border-color .2s;}
+.mitre-card:hover{border-color:var(--purple);}
+.mitre-tactic{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--purple);text-transform:uppercase;margin-bottom:4px;}
+.mitre-id{font-family:'Space Mono',monospace;font-size:11px;color:var(--cyan);font-weight:700;}
+.mitre-name{font-size:12px;font-weight:500;margin-top:3px;line-height:1.4;}
+.mitre-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;}
+.mitre-link{display:inline-flex;align-items:center;gap:4px;font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan2);text-decoration:none;margin-top:6px;}
+.mitre-link:hover{color:var(--cyan);}
+.mitre-link svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2;}
+
+/* ── REF LINKS ───────────────────────────────────── */
+.ref-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.ref-link{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;color:var(--cyan2);text-decoration:none;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);padding:3px 9px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;transition:all .15s;}
+[data-theme="light"] .ref-link{background:rgba(0,149,179,.06);border-color:rgba(0,149,179,.2);}
+.ref-link:hover{background:rgba(0,229,255,.12);color:var(--cyan);border-color:rgba(0,229,255,.35);}
+.ref-link svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;}
+
+/* ── HISTORY ─────────────────────────────────────── */
+.hist-empty{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.hist-empty-icon{font-size:36px;opacity:.3;margin-bottom:.75rem;}
+.hist-empty-txt{font-size:13px;}
+.hist-item{display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;}
+.hist-item:last-child{border-bottom:none;}
+.hist-item:hover{background:var(--s2);}
+.hist-ioc{font-family:'Space Mono',monospace;font-size:12px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hist-type{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;flex-shrink:0;background:var(--s2);border:1px solid var(--b2);color:var(--muted);}
+.hist-verdict{font-family:'Space Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.hist-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;}
+.hist-replay{font-size:11px;color:var(--cyan2);flex-shrink:0;opacity:0;transition:opacity .15s;}
+.hist-del{font-size:11px;color:var(--muted);flex-shrink:0;opacity:0;transition:opacity .15s;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.hist-del:hover{color:var(--red);}
+.hist-item:hover .hist-replay,.hist-item:hover .hist-del{opacity:1;}
+.hist-clear{display:flex;justify-content:flex-end;padding:8px 1.25rem;border-top:1px solid var(--b1);}
+.hist-clear-btn{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:.06em;}
+.hist-clear-btn:hover{color:var(--red);}
+
+/* ── ACTIONS ─────────────────────────────────────── */
+.rec-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:1.25rem;margin-bottom:10px;}
+.rec-txt{font-size:13px;line-height:1.75;color:var(--text);}
+.action-row{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
+.act-btn{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;padding:8px 15px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--text);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.act-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.act-btn.prim{background:rgba(0,229,255,.08);border-color:var(--cyan2);color:var(--cyan);}
+.act-btn.export{background:rgba(179,136,255,.08);border-color:rgba(179,136,255,.4);color:var(--purple);}
+.act-btn.export:hover{border-color:var(--purple);color:var(--purple);}
+
+/* ── COPY MASTER ─────────────────────────────────── */
+.copy-master{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--cyan);color:#000;border:none;border-radius:9px;padding:12px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.07em;cursor:pointer;margin-top:14px;transition:filter .15s;}
+.copy-master:hover{filter:brightness(1.1);}
+
+/* ── DEMO NOTICE ─────────────────────────────────── */
+.demo-notice{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.18);border-radius:10px;padding:.9rem 1.25rem;margin-bottom:1rem;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6;}
+[data-theme="light"] .demo-notice{background:rgba(0,149,179,.05);border-color:rgba(0,149,179,.2);}
+.demo-notice strong{color:var(--cyan);}
+
+/* ── PROMPT DISPLAY ──────────────────────────────── */
+.prompt-box{background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:1.25rem;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;white-space:pre-wrap;max-height:420px;overflow-y:auto;}
+
+/* step instructions */
+.step{display:flex;gap:10px;padding:5px 0;font-size:12px;color:var(--muted);line-height:1.6;}
+.sn{font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan);background:rgba(0,229,255,.1);border-radius:4px;padding:1px 7px;height:fit-content;flex-shrink:0;margin-top:2px;}
+[data-theme="light"] .sn{background:rgba(0,149,179,.1);}
+code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space Mono',monospace;font-size:11px;color:var(--cyan);}
+
+/* results section */
+.results{display:none;}
+.results.on{display:block;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px;}
+
+/* ── BULK RESULTS ────────────────────────────────── */
+.bulk-results{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:hidden;margin-bottom:10px;display:none;}
+.bulk-results.on{display:block;}
+.bulk-row{display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;}
+.bulk-row:last-child{border-bottom:none;}
+.bulk-row:hover{background:var(--s2);}
+.bulk-ioc{font-family:'Space Mono',monospace;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── TOAST ───────────────────────────────────────── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s1);border:1px solid var(--b2);border-radius:9px;padding:10px 20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text);box-shadow:0 8px 32px var(--shadow);opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* responsive */
+@media(max-width:520px){
+  .tabs .tab{font-size:9px;padding:8px 4px;}
+  .verdict{flex-wrap:wrap;}
+  .v-score{margin-left:0;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ── HEADER ── -->
+<div class="hdr">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.5-3.5"/><path d="M11 8v3m0 0v3m0-3h3m-3 0H8"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">IOC ANALYZER</div>
+      <div class="brand-tag">v3 · THREAT INTELLIGENCE</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">
+      <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="themeLabel">LIGHT</span>
+    </button>
+    <div class="live-pill"><span class="live-dot"></span>OPERACIONAL</div>
+  </div>
+</div>
+
+<!-- ── TABS ── -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(this,'main')">ANALIZADOR</div>
+  <div class="tab" onclick="switchTab(this,'prompt')">PROMPT MAESTRO</div>
+  <div class="tab" onclick="switchTab(this,'history')" id="histTab">HISTORIAL <span class="badge" id="histBadge" style="display:none">0</span></div>
+  <div class="tab" onclick="switchTab(this,'ref')">FUENTES</div>
+</div>
+
+<!-- ══════════════ TAB: MAIN ══════════════ -->
+<div id="tab-main">
+  <div class="instr">
+    <div class="label" style="margin-bottom:12px">// flujo de uso</div>
+    <div class="step"><span class="sn">01</span><span>Copia el <strong style="color:var(--text)">Prompt Maestro</strong> (tab arriba) y pégalo como primer mensaje en una nueva conversación con Claude.</span></div>
+    <div class="step"><span class="sn">02</span><span>Escribe <code>ANALIZAR: [IOC]</code> — ej: <code>ANALIZAR: 185.220.101.45</code>. Claude detecta el tipo, hace fetch directo a cada plataforma y genera el reporte con MITRE mapping, timeline y links.</span></div>
+    <div class="step"><span class="sn">03</span><span>El historial persiste entre sesiones en el tab <strong style="color:var(--text)">Historial</strong>. Usa el modo <strong style="color:var(--text)">Bulk</strong> para analizar múltiples IOCs a la vez.</span></div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-card">
+    <span class="label" style="display:block;margin-bottom:10px">// ingresa un IOC para analizar (demo)</span>
+    <div class="input-row">
+      <input class="ioc-field" id="iocIn" placeholder="185.220.101.45 · malware.evil.com · d41d8cd98f00b204..." oninput="onInput(this.value)" onkeydown="if(event.key==='Enter')go()"/>
+      <button class="run-btn" id="runBtn" onclick="go()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4-4"/></svg>
+        ANALIZAR
+      </button>
+    </div>
+    <div class="detect-row">
+      <span class="type-pill" id="tp-ip">IP</span>
+      <span class="type-pill" id="tp-ipv6">IPv6</span>
+      <span class="type-pill" id="tp-domain">DOMINIO/URL</span>
+      <span class="type-pill" id="tp-md5">MD5</span>
+      <span class="type-pill" id="tp-sha1">SHA1</span>
+      <span class="type-pill" id="tp-sha256">SHA256</span>
+      <span class="detect-msg" id="dmsg"></span>
+    </div>
+    <button class="bulk-toggle" onclick="toggleBulk()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>
+      MODO BULK
+    </button>
+    <div class="bulk-area" id="bulkArea">
+      <textarea class="bulk-field" id="bulkIn" placeholder="Un IOC por línea:&#10;185.220.101.45&#10;evil.com&#10;d41d8cd98f00b204e9800998ecf8427e"></textarea>
+      <div class="bulk-hint">// uno por línea · máx 20 IOCs · soporta IPs, dominios y hashes mixtos</div>
+      <button class="bulk-run-btn" onclick="goBulk()">⚡ ANALIZAR TODOS</button>
+    </div>
+  </div>
+
+  <!-- Sources -->
+  <div class="sources-wrap">
+    <div class="label" style="margin-bottom:12px">// fuentes configuradas</div>
+    <div class="sources-grid" id="srcGrid"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="prog-wrap" id="prog">
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-msg" id="progMsg"></div>
+  </div>
+
+  <!-- Bulk Results -->
+  <div class="bulk-results" id="bulkResults">
+    <div style="padding:9px 1.25rem;background:var(--s2);border-bottom:1px solid var(--b1);">
+      <div class="label">// resultados bulk — clic en IOC para ver detalle</div>
+    </div>
+    <div id="bulkList"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+</div>
+
+<!-- ══════════════ TAB: PROMPT ══════════════ -->
+<div id="tab-prompt" style="display:none">
+  <div class="card">
+    <div class="label" style="margin-bottom:10px">// prompt maestro v3 — incluye MITRE ATT&CK + Timeline + Links directos</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+      Pega este prompt como <strong style="color:var(--text)">primer mensaje</strong> en Claude. Desde ese momento solo escribe <code>ANALIZAR: [IOC]</code> para obtener el reporte completo con MITRE mapping, timeline de actividad y links de referencia directos al IOC.
+    </div>
+    <div class="prompt-box" id="promptDisplay"></div>
+    <button class="copy-master" onclick="copyPrompt()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      COPIAR PROMPT MAESTRO AL PORTAPAPELES
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ TAB: HISTORY ══════════════ -->
+<div id="tab-history" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:10px 1.25rem;background:var(--s2);border-bottom:1px solid var(--b1);">
+      <div class="label">// IOCs analizados — persiste entre sesiones</div>
+    </div>
+    <div id="histList"></div>
+    <div class="hist-clear" id="histClearRow" style="display:none">
+      <button class="hist-clear-btn" onclick="clearHistory()">✕ LIMPIAR HISTORIAL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB: REF ══════════════ -->
+<div id="tab-ref" style="display:none">
+  <div class="card">
+    <div class="label" style="margin-bottom:14px">// fuentes por tipo de IOC</div>
+    <div style="margin-bottom:1.25rem">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--cyan);margin-bottom:8px;letter-spacing:.08em">IP ADDRESS (IPv4 / IPv6)</div>
+      <div class="ref-links" id="ref-ip"></div>
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--cyan);margin-bottom:8px;letter-spacing:.08em">DOMINIO / URL</div>
+      <div class="ref-links" id="ref-domain"></div>
+    </div>
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--cyan);margin-bottom:8px;letter-spacing:.08em">HASH DE ARCHIVO (MD5 / SHA1 / SHA256)</div>
+      <div class="ref-links" id="ref-hash"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.wrap -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+
+const SOURCES = {
+  ip:[
+    {name:'VirusTotal',     url:v=>`https://www.virustotal.com/gui/ip-address/${v}`},
+    {name:'AbuseIPDB',      url:v=>`https://www.abuseipdb.com/check/${v}`},
+    {name:'Shodan',         url:v=>`https://www.shodan.io/host/${v}`},
+    {name:'GreyNoise',      url:v=>`https://viz.greynoise.io/ip/${v}`},
+    {name:'OTX AlienVault', url:v=>`https://otx.alienvault.com/indicator/ip/${v}`},
+    {name:'IPinfo',         url:v=>`https://ipinfo.io/${v}`},
+    {name:'BGP Toolkit',    url:v=>`https://bgp.he.net/ip/${v}`},
+    {name:'ThreatFox',      url:v=>`https://threatfox.abuse.ch/browse.php?search=ioc%3A${v}`},
+  ],
+  domain:[
+    {name:'VirusTotal',     url:v=>`https://www.virustotal.com/gui/domain/${v}`},
+    {name:'URLScan.io',     url:v=>`https://urlscan.io/search/#domain%3A${v}`},
+    {name:'OTX AlienVault', url:v=>`https://otx.alienvault.com/indicator/domain/${v}`},
+    {name:'Shodan',         url:v=>`https://www.shodan.io/search?query=${v}`},
+    {name:'Pulsedive',      url:v=>`https://pulsedive.com/indicator/?ioc=${v}`},
+    {name:'ThreatFox',      url:v=>`https://threatfox.abuse.ch/browse.php?search=ioc%3A${v}`},
+    {name:'URLhaus',        url:v=>`https://urlhaus.abuse.ch/browse.php?search=${v}`},
+    {name:'IBM X-Force',    url:v=>`https://exchange.xforce.ibmcloud.com/url/${v}`},
+    {name:'Palo Alto WF',   url:v=>`https://urlfiltering.paloaltonetworks.com/`},
+  ],
+  hash:[
+    {name:'VirusTotal',      url:v=>`https://www.virustotal.com/gui/file/${v}`},
+    {name:'Hybrid Analysis', url:v=>`https://www.hybrid-analysis.com/search?query=${v}`},
+    {name:'MalwareBazaar',   url:v=>`https://bazaar.abuse.ch/browse.php?search=sha256%3A${v}`},
+    {name:'OTX AlienVault',  url:v=>`https://otx.alienvault.com/indicator/file/${v}`},
+    {name:'ThreatFox',       url:v=>`https://threatfox.abuse.ch/browse.php?search=ioc%3A${v}`},
+    {name:'ANY.RUN',         url:v=>`https://app.any.run/tasks/#filehash:${v}`},
+    {name:'Triage',          url:v=>`https://tria.ge/s?q=${v}`},
+    {name:'IntezerAnalyze',  url:v=>`https://analyze.intezer.com/`},
+  ],
+};
+
+// MITRE ATT&CK demo data por tipo
+const MITRE_DEMO = {
+  ip:[
+    {tactic:'Command & Control', id:'T1071',  name:'Application Layer Protocol', desc:'Comunicación C2 usando HTTP/S para evadir detección por tráfico legítimo.', url:'https://attack.mitre.org/techniques/T1071/'},
+    {tactic:'Discovery',         id:'T1046',  name:'Network Service Scanning',   desc:'Escaneo activo de puertos y servicios expuestos en la red objetivo.',       url:'https://attack.mitre.org/techniques/T1046/'},
+    {tactic:'Credential Access', id:'T1110',  name:'Brute Force',                desc:'Intentos masivos de fuerza bruta contra SSH (puerto 22) y RDP.',            url:'https://attack.mitre.org/techniques/T1110/'},
+    {tactic:'Defense Evasion',   id:'T1090',  name:'Proxy',                       desc:'Uso de VPS/hosting para enmascarar la infraestructura real del atacante.',   url:'https://attack.mitre.org/techniques/T1090/'},
+  ],
+  domain:[
+    {tactic:'Command & Control', id:'T1568',  name:'Dynamic Resolution',          desc:'Uso de dominios generados o rotados para mantener comunicación C2.',         url:'https://attack.mitre.org/techniques/T1568/'},
+    {tactic:'Initial Access',    id:'T1566',  name:'Phishing',                    desc:'Dominio utilizado en campañas de phishing para captura de credenciales.',    url:'https://attack.mitre.org/techniques/T1566/'},
+    {tactic:'Execution',         id:'T1059',  name:'Command & Scripting Interpreter', desc:'Scripts de powershell/bash descargados desde este dominio.',            url:'https://attack.mitre.org/techniques/T1059/'},
+    {tactic:'Resource Dev.',     id:'T1583',  name:'Acquire Infrastructure',      desc:'Infraestructura adquirida para soporte de operaciones maliciosas.',          url:'https://attack.mitre.org/techniques/T1583/'},
+  ],
+  hash:[
+    {tactic:'Execution',         id:'T1059.003', name:'Windows Command Shell',    desc:'Ejecuta comandos via cmd.exe para persistencia y movimiento lateral.',      url:'https://attack.mitre.org/techniques/T1059/003/'},
+    {tactic:'Persistence',       id:'T1547.001', name:'Registry Run Keys',        desc:'Modifica claves de registro para ejecución automática al inicio.',          url:'https://attack.mitre.org/techniques/T1547/001/'},
+    {tactic:'Defense Evasion',   id:'T1027',  name:'Obfuscated Files',            desc:'Código obfuscado para evadir detección por análisis estático.',              url:'https://attack.mitre.org/techniques/T1027/'},
+    {tactic:'Exfiltration',      id:'T1041',  name:'Exfiltration Over C2',        desc:'Datos exfiltrados por el mismo canal C2 cifrado.',                          url:'https://attack.mitre.org/techniques/T1041/'},
+  ],
+};
+
+// Timeline demo data
+const TIMELINE_DEMO = {
+  ip:[
+    {date:'2026-03-17',color:'red', title:'Último reporte de abuso', detail:'47 reportes en AbuseIPDB — webattack, SSH brute force', src:'AbuseIPDB'},
+    {date:'2026-03-10',color:'amb', title:'Detectado en escaneo masivo', detail:'GreyNoise confirma actividad de scanning en puertos 22, 80, 443, 8080', src:'GreyNoise'},
+    {date:'2026-02-28',color:'pur', title:'Asociado a pulses en OTX', detail:'3 pulses activos — etiquetas: scanner, brute-force, ssh', src:'OTX AlienVault'},
+    {date:'2026-01-15',color:'cyn', title:'Primera vista en VirusTotal', detail:'2/94 detecciones — Seclookup: Malicious, ForcePoint: Suspicious', src:'VirusTotal'},
+    {date:'2025-11-03',color:'grn', title:'IP registrada en Shodan', detail:'Puertos 22, 80, 443, 8080 expuestos. ASN: AS20473 Vultr Holdings', src:'Shodan'},
+  ],
+  domain:[
+    {date:'2026-03-18',color:'amb', title:'Análisis actual', detail:'1/94 detecciones en VT — Seclookup: Malicious', src:'VirusTotal'},
+    {date:'2026-03-01',color:'red', title:'Referenciado en webshell activo', detail:'Archivo c37.php (33/62 detecciones) descarga payloads desde este dominio', src:'VirusTotal Files'},
+    {date:'2025-12-10',color:'pur', title:'Aparece en herramienta ofensiva', detail:'gef.py y LazyOwn referencian el dominio como fuente de exploits', src:'Hybrid Analysis'},
+    {date:'2024-10-24',color:'cyn', title:'Indexado en Cisco Umbrella', detail:'Rank 801,529 — tráfico legítimo consistente de seguridad ofensiva', src:'Cisco Umbrella'},
+    {date:'2009-02-05',color:'grn', title:'Registro del dominio', detail:'Registrado via Name106, Inc. — 17 años de antigüedad', src:'WHOIS'},
+  ],
+  hash:[
+    {date:'2026-03-15',color:'red', title:'Detección activa confirmada', detail:'38/61 motores — familia: Mirai.botnet, variante BASHLITE', src:'VirusTotal'},
+    {date:'2026-03-10',color:'red', title:'Sandbox dinámico — Hybrid Analysis', detail:'Verdict: Malicious. Crea proceso hijo, modifica registro, contacta C2 en 185.220.x.x', src:'Hybrid Analysis'},
+    {date:'2026-03-08',color:'amb', title:'Subido a MalwareBazaar', detail:'Etiquetas: botnet, mirai, arm. Origen: feed automatizado abuse.ch', src:'MalwareBazaar'},
+    {date:'2026-03-07',color:'pur', title:'Asociado a pulse OTX', detail:'Pulse: "Mirai Q1 2026 wave" — 47 IOCs relacionados, actor: unknown', src:'OTX AlienVault'},
+    {date:'2026-03-06',color:'cyn', title:'Primera vista reportada', detail:'ANY.RUN: ejecuta /bin/sh, intenta conexión a 23 IPs en 5 minutos', src:'ANY.RUN'},
+  ],
+};
+
+// Source detail data per type
+const SRC_DATA = {
+  ip:[
+    {n:'VirusTotal',    v:'sus',l:'2/94 detecciones',    d:'Seclookup: Malicious, Forcepoint: Suspicious'},
+    {n:'AbuseIPDB',     v:'sus',l:'47 reportes',         d:'Confidence 73% — webattack, SSH brute force'},
+    {n:'Shodan',        v:'unk',l:'4 puertos',            d:'22, 80, 443, 8080 — OpenSSH 8.9, nginx/1.24'},
+    {n:'GreyNoise',     v:'cln',l:'Mass scanner',         d:'Benign — escaneando internet masivamente'},
+    {n:'OTX AlienVault',v:'sus',l:'3 pulses',            d:'Tags: scanner, brute-force, ssh'},
+    {n:'IPinfo',        v:'unk',l:'AS20473 Vultr',        d:'NL, Amsterdam — tipo: hosting'},
+    {n:'BGP Toolkit',   v:'unk',l:'104.238.x.0/24',      d:'Prefix registrado hace 4 años'},
+    {n:'ThreatFox',     v:'cln',l:'Sin registros',        d:'No aparece en feeds activos'},
+  ],
+  domain:[
+    {n:'VirusTotal',    v:'sus',l:'1/94 detecciones',    d:'Seclookup: Malicious'},
+    {n:'URLScan.io',    v:'cln',l:'12 escaneos',          d:"Último: 2026-03-10, sin recursos externos sospechosos"},
+    {n:'OTX AlienVault',v:'cln',l:'Sin pulses',          d:'No asociado a campañas documentadas'},
+    {n:'Shodan',        v:'unk',l:'Puertos 80/443',       d:"Linode, nginx, Let's Encrypt cert"},
+    {n:'Pulsedive',     v:'sus',l:'Risk: medium',         d:'Referenciado en 2 feeds de seguridad ofensiva'},
+    {n:'ThreatFox',     v:'cln',l:'Sin registros',        d:'No en feeds de malware activo'},
+    {n:'URLhaus',       v:'cln',l:'Sin registros',        d:'No distribuye malware directamente'},
+    {n:'IBM X-Force',   v:'cln',l:'Score: 1/10',          d:'Categoría: Security Research'},
+    {n:'Palo Alto WF',  v:'unk',l:'Búsqueda manual',         d:'Ingresar IOC en el sitio — Category + Risk Level (Low/Medium/High-Risk)'},
+  ],
+  hash:[
+    {n:'VirusTotal',     v:'mal',l:'38/61 detecciones',  d:'Familia: Mirai.botnet — BASHLITE variant'},
+    {n:'Hybrid Analysis',v:'mal',l:'Malicious',           d:'Crea proceso hijo, modifica registro Run Keys'},
+    {n:'MalwareBazaar',  v:'mal',l:'Confirmado',          d:'Tags: botnet, mirai, arm — origen: abuse.ch feed'},
+    {n:'OTX AlienVault', v:'mal',l:'2 pulses',            d:'Pulse: Mirai Q1 2026 — 47 IOCs relacionados'},
+    {n:'ThreatFox',      v:'mal',l:'C2 confirmado',       d:'C2: 185.220.x.x:4444 — familia: Mirai'},
+    {n:'ANY.RUN',        v:'mal',l:'Score: 100',          d:'Ejecuta /bin/sh, conecta a 23 IPs en 5 min'},
+    {n:'Triage',         v:'mal',l:'Malicious',           d:'Score 10/10, detecta evasión de sandbox'},
+    {n:'IntezerAnalyze', v:'mal',l:'Mirai lineage',       d:'80% similaridad genómica con Mirai.B'},
+  ],
+};
+
+// Findings per type
+const FINDINGS_DATA = {
+  ip:[
+    {lvl:'f-me',badge:'MEDIO', txt:'Reportado 47 veces en AbuseIPDB — categorías: webattack, SSH brute force', src:'AbuseIPDB · Confidence 73%'},
+    {lvl:'f-me',badge:'MEDIO', txt:'2/94 motores en VirusTotal — 92 limpios, baja prevalencia pero señal presente', src:'VirusTotal · último análisis hace 2h'},
+    {lvl:'f-in',badge:'INFO',  txt:'GreyNoise: "mass internet scanner" — no amenaza dirigida, ruido de red generalizado', src:'GreyNoise Intelligence'},
+    {lvl:'f-lo',badge:'BAJO',  txt:'Sin campañas documentadas en OTX ni en ThreatFox — no asociado a actores conocidos', src:'OTX AlienVault + ThreatFox abuse.ch'},
+  ],
+  domain:[
+    {lvl:'f-hi',badge:'ALTO',  txt:'Referenciado en webshell c37.php (33/62 detecciones) como servidor de payloads', src:'VirusTotal Files · 2026-03-01'},
+    {lvl:'f-me',badge:'MEDIO', txt:'1/94 motores en VirusTotal — Seclookup categoriza como Malicious', src:'VirusTotal · análisis reciente'},
+    {lvl:'f-me',badge:'MEDIO', txt:'Pulsedive risk: medium — aparece en 2 feeds de seguridad ofensiva activos', src:'Pulsedive'},
+    {lvl:'f-in',badge:'INFO',  txt:'URLScan.io: sin recursos externos sospechosos en 12 escaneos recientes', src:'URLScan.io'},
+  ],
+  hash:[
+    {lvl:'f-hi',badge:'ALTO',  txt:'38/61 motores en VirusTotal confirman familia Mirai.botnet — BASHLITE variant', src:'VirusTotal · 38/61 detecciones'},
+    {lvl:'f-hi',badge:'ALTO',  txt:'Sandbox dinámico: crea proceso hijo, modifica Run Keys, contacta C2 en 185.220.x.x', src:'Hybrid Analysis · Verdict: Malicious'},
+    {lvl:'f-me',badge:'MEDIO', txt:'Subido a MalwareBazaar desde feed automatizado abuse.ch — tags: botnet, mirai, arm', src:'MalwareBazaar'},
+    {lvl:'f-in',badge:'INFO',  txt:'Asociado a pulse OTX "Mirai Q1 2026" — 47 IOCs relacionados en la misma campaña', src:'OTX AlienVault'},
+  ],
+};
+
+// Infrastructure info per type
+const INFRA_DATA = {
+  ip:{
+    id:[
+      {k:'ASN',          v:'AS20473 — Vultr Holdings LLC'},
+      {k:'País',         v:'NL — Netherlands'},
+      {k:'Tipo de red',  v:'VPS / Cloud Hosting'},
+      {k:'Puertos',      v:'22, 80, 443, 8080'},
+    ],
+    infra:[
+      {k:'Cert TLS',     v:"Let's Encrypt — *.compute-1.amazonaws.com"},
+      {k:'Sistema',      v:'OpenSSH 8.9p1, nginx/1.24'},
+      {k:'Reputación',   v:'Mass-scanner (GreyNoise)'},
+      {k:'Primera vista',v:'2025-11-03'},
+    ],
+  },
+  domain:{
+    id:[
+      {k:'IOC',          v:'exploit.education'},
+      {k:'Tipo',         v:'Dominio'},
+      {k:'Registrar',    v:'Name106, Inc.'},
+      {k:'Registrado',   v:'2009-02-05'},
+    ],
+    infra:[
+      {k:'IP actual',    v:'45.33.32.156 (Linode)'},
+      {k:'Cert TLS',     v:"Let's Encrypt, válido"},
+      {k:'Rango CIDR',   v:'45.33.32.0/24'},
+      {k:'Antigüedad',   v:'17 años'},
+    ],
+  },
+  hash:{
+    id:[
+      {k:'Tipo archivo', v:'ELF 32-bit ARM'},
+      {k:'Tamaño',       v:'87,552 bytes'},
+      {k:'Familia',      v:'Mirai.botnet / BASHLITE'},
+      {k:'Primera vista',v:'2026-03-06'},
+    ],
+    infra:[
+      {k:'Empaquetado',  v:'No (sin packer)'},
+      {k:'C2 observado', v:'185.220.x.x:4444'},
+      {k:'Sandbox score',v:'10/10 (Triage)'},
+      {k:'Evasión',      v:'Anti-sandbox detectado'},
+    ],
+  },
+};
+
+// Recommendation per type
+const REC_DATA = {
+  ip:{
+    action:'👁️ MONITOREAR',
+    color:'var(--amber)',
+    txt:'Actividad consistente con scanning automatizado desde VPS europeo. Baja probabilidad de amenaza dirigida. Revisar si hay conexiones activas en logs internos antes de bloquear.',
+    pivot:'Rango CIDR /24, certificados TLS en el mismo ASN, historial Passive DNS.',
+  },
+  domain:{
+    action:'🔍 INVESTIGAR MÁS',
+    color:'var(--purple)',
+    txt:'Dominio con contenido de seguridad ofensiva legítima, pero referenciado en webshells activos. No bloquear sin validar uso interno — investigar si hay usuarios o endpoints accediendo.',
+    pivot:'Subdomínios, IPs históricas (Passive DNS), archivos descargados desde el dominio.',
+  },
+  hash:{
+    action:'🚫 BLOQUEAR',
+    color:'var(--red)',
+    txt:'Malware confirmado familia Mirai con 38/61 detecciones. Bloquear en EDR/endpoint inmediatamente. Investigar origen (vector de entrada) y alcance lateral.',
+    pivot:'IP C2 185.220.x.x, rango /24, otros hashes del mismo pulse OTX, persistencia en Run Keys.',
+  },
+};
+
+// ── localStorage history (renamed from 'history' to avoid shadowing window.history) ──
+const HIST_KEY = 'ioc-analyzer-history';
+let iocHistory = [];
+
+function loadHistory(){
+  try {
+    const raw = localStorage.getItem(HIST_KEY);
+    if(raw) iocHistory = JSON.parse(raw);
+  } catch(e){ iocHistory = []; }
+  updateHistBadge();
+}
+
+function saveHistory(){
+  try {
+    localStorage.setItem(HIST_KEY, JSON.stringify(iocHistory));
+  } catch(e){ console.warn('localStorage save failed:', e); }
+}
+
+// ═══════════════════════════════════════════════════
+// MASTER PROMPT
+// ═══════════════════════════════════════════════════
+const MASTER_PROMPT = `## ROL
+Eres un analista experto de Cyber Threat Intelligence (CTI). Cada vez que el usuario escriba "ANALIZAR: [IOC]" debes detectar el tipo, consultar todas las fuentes relevantes usando web_fetch y web_search, y generar el reporte estructurado completo que se describe abajo — incluyendo MITRE ATT&CK mapping, timeline de actividad y links directos.
+
+---
+
+## DETECCIÓN DE TIPO
+- IP (IPv4): formato x.x.x.x
+- IP (IPv6): contiene ":" y grupos hexadecimales
+- Dominio/URL: contiene punto, no es hash (ej: evil.com, https://malware.io/path)
+- Hash MD5: 32 hex · Hash SHA1: 40 hex · Hash SHA256: 64 hex
+
+---
+
+## FUENTES Y URLs POR TIPO (construir con el IOC real)
+
+### IP ADDRESS — consultar en este orden:
+1. VirusTotal     → web_fetch: https://www.virustotal.com/gui/ip-address/{IOC}
+2. AbuseIPDB      → web_fetch: https://www.abuseipdb.com/check/{IOC}
+3. Shodan         → web_fetch: https://www.shodan.io/host/{IOC} + web_search: "{IOC} shodan ports services"
+4. GreyNoise      → web_fetch: https://viz.greynoise.io/ip/{IOC} + web_search: "{IOC} greynoise classification"
+5. OTX AlienVault → web_fetch: https://otx.alienvault.com/indicator/ip/{IOC}
+6. IPinfo         → web_fetch: https://ipinfo.io/{IOC}/json
+7. BGP Toolkit    → web_fetch: https://bgp.he.net/ip/{IOC}
+8. ThreatFox      → web_fetch: https://threatfox.abuse.ch/browse.php?search=ioc%3A{IOC} + web_search: "{IOC} threatfox"
+
+### DOMINIO / URL — consultar en este orden:
+1. VirusTotal     → web_fetch: https://www.virustotal.com/gui/domain/{IOC}
+2. URLScan.io     → web_fetch: https://urlscan.io/search/#domain%3A{IOC}
+3. OTX AlienVault → web_fetch: https://otx.alienvault.com/indicator/domain/{IOC}
+4. Shodan         → web_search: "{IOC} shodan infrastructure ports"
+5. Pulsedive      → web_fetch: https://pulsedive.com/indicator/?ioc={IOC}
+6. ThreatFox      → web_fetch: https://threatfox.abuse.ch/browse.php?search=ioc%3A{IOC}
+7. URLhaus        → web_fetch: https://urlhaus.abuse.ch/browse.php?search={IOC}
+8. IBM X-Force    → web_search: "{IOC} IBM X-Force threat intelligence"
+9. Palo Alto WF   → web_fetch: https://urlfiltering.paloaltonetworks.com/ (búsqueda manual — reportar Category y Risk Level encontrados)
+
+### HASH (MD5/SHA1/SHA256) — consultar en este orden:
+1. VirusTotal      → web_fetch: https://www.virustotal.com/gui/file/{IOC}
+2. Hybrid Analysis → web_fetch: https://www.hybrid-analysis.com/search?query={IOC}
+3. MalwareBazaar   → web_fetch: https://bazaar.abuse.ch/browse.php?search=sha256%3A{IOC}
+4. OTX AlienVault  → web_fetch: https://otx.alienvault.com/indicator/file/{IOC}
+5. ThreatFox       → web_fetch: https://threatfox.abuse.ch/browse.php?search=ioc%3A{IOC}
+6. ANY.RUN         → web_search: "{IOC} any.run sandbox analysis"
+7. Triage          → web_fetch: https://tria.ge/s?q={IOC}
+
+---
+
+## FORMATO DE REPORTE COMPLETO
+
+---
+### 🔍 IOC ANALIZADO
+| Campo | Valor |
+|-------|-------|
+| IOC | \`{valor}\` |
+| Tipo | {IP / Dominio / Hash SHA256 / etc.} |
+| Fecha análisis | {fecha actual} |
+
+---
+### ⚡ VEREDICTO
+> **[🔴 MALICIOSO / 🟡 SOSPECHOSO / 🟢 LIMPIO / ⚪ DESCONOCIDO]** — Confianza: [Alta / Media / Baja]
+
+{2-3 oraciones directas con el dato más relevante que justifica el veredicto.}
+
+---
+### 📊 RESUMEN POR FUENTE
+| Fuente | Estado | Dato clave | Link directo |
+|--------|--------|------------|-------------|
+| VirusTotal | {estado} | {detalle} | [Ver →]({URL con IOC}) |
+| AbuseIPDB/URLScan/Hybrid | {estado} | {detalle} | [Ver →]({URL con IOC}) |
+| Shodan | {estado} | {detalle} | [Ver →]({URL con IOC}) |
+| GreyNoise/ThreatFox | {estado} | {detalle} | [Ver →]({URL con IOC}) |
+| OTX AlienVault | {estado} | {detalle} | [Ver →]({URL con IOC}) |
+(una fila por fuente consultada)
+
+---
+### 🔎 HALLAZGOS CLAVE
+- **[ALTO]** {hallazgo} → *Fuente: X*
+- **[MEDIO]** {hallazgo} → *Fuente: X*
+- **[BAJO]** {hallazgo} → *Fuente: X*
+- **[INFO]** {hallazgo} → *Fuente: X*
+
+---
+### 🏗️ INFRAESTRUCTURA / CONTEXTO TÉCNICO
+| Campo | Valor |
+|-------|-------|
+| IP / Hosting | {valor} |
+| ASN | {AS##### — Organización} |
+| País | {código + nombre} |
+| Tipo de red | {ISP / VPS / Hosting / VPN / Tor / CDN} |
+| Puertos activos | {lista} |
+| Certificado TLS | {estado, emisor, CN} |
+| Historial DNS | {IPs previas si aplica} |
+| Registrado | {fecha WHOIS} |
+| Registrar | {nombre} |
+
+---
+### ⏱️ TIMELINE DE ACTIVIDAD
+Construye una línea de tiempo cronológica (de más reciente a más antiguo) con los eventos encontrados en las fuentes:
+- Reportes de abuso con fechas
+- Primera y última detección en VT
+- Aparición en feeds (ThreatFox, URLhaus, MalwareBazaar)
+- Análisis en sandboxes con fecha
+- Registro/cambios de dominio o IP
+- Asociación a campañas o actores con fecha
+- Indexación en Shodan/Censys
+
+Formato por evento:
+**[FECHA]** — {Descripción del evento} *(Fuente: X)*
+
+---
+### 🛡️ MITRE ATT&CK MAPPING
+Basándote en el comportamiento observado en las fuentes, mapea las técnicas relevantes:
+
+| Táctica | Técnica ID | Nombre | Evidencia |
+|---------|-----------|--------|-----------|
+| {táctica} | [T{XXXX}](https://attack.mitre.org/techniques/T{XXXX}/) | {nombre} | {qué fuente lo indica} |
+
+Incluye solo técnicas con evidencia real encontrada en las fuentes. Mínimo 2, máximo 6.
+Si no hay suficiente evidencia, indicar "Insuficiente información para mapping MITRE".
+
+---
+### 📝 RECOMENDACIÓN
+**Acción:** [🚫 BLOQUEAR / 👁️ MONITOREAR / ✅ WHITELIST / 🔍 INVESTIGAR MÁS]
+
+{Justificación. Incluir:}
+- Urgencia y superficie de bloqueo (firewall / proxy / EDR / DNS)
+- Si es probable falso positivo y por qué
+- IOCs relacionados sugeridos para pivoting
+
+---
+### 🔗 LINKS DE REFERENCIA DIRECTOS
+Lista TODOS los links con el IOC ya insertado en la URL:
+- 🔴 VirusTotal: {URL completa}
+- 🟡 {Plataforma 2}: {URL completa}
+- 🔵 Shodan: {URL completa}
+- 🟢 {Plataforma 4}: {URL completa}
+(una línea por fuente consultada)
+
+---
+
+## REGLAS
+1. Siempre hacer búsquedas reales — nunca inventar datos o detecciones.
+2. web_fetch primero, web_search como respaldo si falla.
+3. Si una fuente no tiene registros: indicar "Sin registros" en la tabla.
+4. Links de referencia siempre con el IOC ya insertado.
+5. Para hashes MD5 en MalwareBazaar usar md5%3A{HASH}, para SHA256 usar sha256%3A{HASH}.
+6. El MITRE mapping debe basarse en comportamiento real encontrado, no en suposiciones.
+7. El timeline debe ordenarse del evento más reciente al más antiguo.
+8. Si el usuario pega datos crudos (WHOIS, VT report, logs), integrarlos al análisis.
+9. Para IPv6 usar el mismo flujo que IPv4 — todas las fuentes lo soportan.`;
+
+// ═══════════════════════════════════════════════════
+// SHARED CONSTANTS
+// ═══════════════════════════════════════════════════
+const extIco=`<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+document.getElementById('promptDisplay').textContent = MASTER_PROMPT;
+renderSrcGrid(null);
+renderRefTab();
+loadHistory();
+renderHistory();
+applyStoredTheme();
+
+// ═══════════════════════════════════════════════════
+// THEME (with persistence)
+// ═══════════════════════════════════════════════════
+function applyStoredTheme(){
+  const stored = localStorage.getItem('ioc-theme');
+  if(stored && stored !== 'dark'){
+    document.documentElement.setAttribute('data-theme', stored);
+    syncThemeUI(stored);
+  }
+}
+
+function toggleTheme(){
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('ioc-theme', next);
+  syncThemeUI(next);
+}
+
+function syncThemeUI(theme){
+  const icon = document.getElementById('themeIcon');
+  const lbl  = document.getElementById('themeLabel');
+  if(theme === 'light'){
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+    lbl.textContent = 'DARK';
+  } else {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    lbl.textContent = 'LIGHT';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function switchTab(el, id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['main','prompt','history','ref'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===id?'block':'none';
+  });
+  if(id==='history') renderHistory();
+}
+
+// ═══════════════════════════════════════════════════
+// TYPE DETECT (extended: IPv6, MD5/SHA1/SHA256 separate)
+// ═══════════════════════════════════════════════════
+function detectType(v){
+  if(!v) return null;
+  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) return 'ip';
+  // IPv6 — must come before domain check
+  if(/^[a-f0-9:]+:[a-f0-9:]+$/i.test(v) && v.includes(':')) return 'ipv6';
+  if(/^[a-f0-9]{32}$/i.test(v)) return 'md5';
+  if(/^[a-f0-9]{40}$/i.test(v)) return 'sha1';
+  if(/^[a-f0-9]{64}$/i.test(v)) return 'sha256';
+  if(v.includes('.')||v.startsWith('http')) return 'domain';
+  return null;
+}
+
+// Map specific hash/ip types to the data category
+function typeToCategory(t){
+  if(t==='ip'||t==='ipv6') return 'ip';
+  if(t==='md5'||t==='sha1'||t==='sha256') return 'hash';
+  return t; // 'domain'
+}
+
+function onInput(v){
+  v=v.trim();
+  ['ip','ipv6','domain','md5','sha1','sha256'].forEach(t=>document.getElementById('tp-'+t).classList.remove('on'));
+  document.getElementById('dmsg').textContent='';
+  const t=detectType(v);
+  if(t){
+    document.getElementById('tp-'+t).classList.add('on');
+    const lbl={
+      ip:'IPv4 detectada',
+      ipv6:'IPv6 detectada',
+      domain:'Dominio / URL detectado',
+      md5:'Hash MD5 detectado',
+      sha1:'Hash SHA1 detectado',
+      sha256:'Hash SHA256 detectado',
+    };
+    document.getElementById('dmsg').textContent='→ '+lbl[t];
+    renderSrcGrid(typeToCategory(t));
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SOURCES GRID
+// ═══════════════════════════════════════════════════
+function renderSrcGrid(activeType){
+  const all=[...new Set(Object.values(SOURCES).flatMap(a=>a.map(s=>s.name)))];
+  const active = activeType ? SOURCES[activeType].map(s=>s.name) : [];
+  document.getElementById('srcGrid').innerHTML = all.map(n=>
+    `<div class="src-chip ${active.includes(n)?'on':''}" id="sc-${n.replace(/[^a-z0-9]/gi,'_')}"><span class="src-dot"></span>${n}</div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// REF TAB
+// ═══════════════════════════════════════════════════
+function renderRefTab(){
+  ['ip','domain','hash'].forEach(type=>{
+    document.getElementById('ref-'+type).innerHTML=SOURCES[type].map(s=>
+      `<a class="ref-link" href="${s.url('[IOC]')}" target="_blank">${extIco}${s.name}</a>`
+    ).join('');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════
+function renderHistory(){
+  const el = document.getElementById('histList');
+  const cr = document.getElementById('histClearRow');
+  if(!iocHistory.length){
+    el.innerHTML=`<div class="hist-empty"><div class="hist-empty-icon">🕓</div><div class="hist-empty-txt">El historial persiste entre sesiones — aparecerá aquí al analizar tu primer IOC</div></div>`;
+    cr.style.display='none';
+    return;
+  }
+  cr.style.display='flex';
+  el.innerHTML = iocHistory.slice().reverse().map((h,i)=>{
+    const ri = iocHistory.length-1-i;
+    const vc={mal:'sb-mal',sus:'sb-sus',cln:'sb-cln',unk:'sb-unk'}[h.cls];
+    const vl={mal:'MALICIOSO',sus:'SOSPECHOSO',cln:'LIMPIO',unk:'DESCONOCIDO'}[h.cls];
+    const ts = h.date ? `${h.date} ${h.time}` : h.time;
+    return `<div class="hist-item" onclick="replayFromHistory(${ri})">
+      <div class="hist-ioc">${escHtml(h.ioc)}</div>
+      <span class="hist-type">${h.type.toUpperCase()}</span>
+      <span class="hist-verdict src-badge ${vc}">${vl}</span>
+      <span class="hist-time">${ts}</span>
+      <span class="hist-replay">↩ re-abrir</span>
+      <button class="hist-del" onclick="deleteHistEntry(event,${ri})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function clearHistory(){
+  if(confirm('¿Limpiar todo el historial? Esta acción no se puede deshacer.')){
+    iocHistory=[];
+    saveHistory();
+    updateHistBadge();
+    renderHistory();
+  }
+}
+
+function deleteHistEntry(e, idx){
+  e.stopPropagation();
+  iocHistory.splice(idx,1);
+  saveHistory();
+  updateHistBadge();
+  renderHistory();
+}
+
+function updateHistBadge(){
+  const b = document.getElementById('histBadge');
+  if(iocHistory.length){b.style.display='inline';b.textContent=iocHistory.length;}
+  else b.style.display='none';
+}
+
+function addToHistory(ioc, type, cls){
+  const now = new Date();
+  const date = now.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  // avoid duplicate consecutive entries
+  if(iocHistory.length && iocHistory[iocHistory.length-1].ioc === ioc) return;
+  iocHistory.push({ioc, type, cls, time, date});
+  if(iocHistory.length > 100) iocHistory.shift(); // cap at 100 entries
+  updateHistBadge();
+  saveHistory();
+}
+
+function replayFromHistory(idx){
+  const h = iocHistory[idx];
+  document.getElementById('iocIn').value = h.ioc;
+  onInput(h.ioc);
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab')[0].classList.add('active');
+  ['main','prompt','history','ref'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t==='main'?'block':'none';
+  });
+  go();
+}
+
+// ═══════════════════════════════════════════════════
+// BULK MODE
+// ═══════════════════════════════════════════════════
+let bulkMode = false;
+function toggleBulk(){
+  bulkMode = !bulkMode;
+  document.getElementById('bulkArea').classList.toggle('on', bulkMode);
+}
+
+async function goBulk(){
+  const raw = document.getElementById('bulkIn').value.trim();
+  if(!raw) return;
+  const lines = [...new Set(raw.split('\n').map(l=>l.trim()).filter(Boolean))].slice(0,20);
+  if(!lines.length) return;
+
+  const bulkResultsEl = document.getElementById('bulkResults');
+  const bulkListEl    = document.getElementById('bulkList');
+  bulkResultsEl.classList.add('on');
+  bulkListEl.innerHTML = '';
+  document.getElementById('results').classList.remove('on');
+
+  for(const ioc of lines){
+    const t = detectType(ioc) || 'domain';
+    const cat = typeToCategory(t);
+    // Simulate per-IOC processing
+    await new Promise(r=>setTimeout(r,200+Math.random()*300));
+    const demos = {
+      ip:     {cls:'sus',label:'SOSPECHOSO'},
+      domain: {cls:'sus',label:'SOSPECHOSO'},
+      hash:   {cls:'mal',label:'MALICIOSO'},
+    };
+    const d = demos[cat];
+    addToHistory(ioc, t, d.cls);
+    const vc={mal:'sb-mal',sus:'sb-sus',cln:'sb-cln',unk:'sb-unk'}[d.cls];
+    bulkListEl.innerHTML += `<div class="bulk-row" onclick="loadBulkDetail('${escHtml(ioc)}','${t}')">
+      <div class="bulk-ioc">${escHtml(ioc)}</div>
+      <span class="hist-type">${t.toUpperCase()}</span>
+      <span class="src-badge ${vc}">${d.label}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--cyan2)">ver detalle →</span>
+    </div>`;
+  }
+  showToast(`✓ ${lines.length} IOCs procesados`);
+}
+
+function loadBulkDetail(ioc, type){
+  const cat = typeToCategory(type);
+  const demos = {
+    ip:     {cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'62',unit:'RISK SCORE', sub:'IP activa en scanning masivo desde VPS europeo. No confirmada como amenaza dirigida.'},
+    domain: {cls:'sus',icon:'⚠',label:'SOSPECHOSO', score:'45',unit:'RISK SCORE', sub:'Dominio con contenido de seguridad ofensiva. Referenciado en herramientas de ataque.'},
+    hash:   {cls:'mal',icon:'🔴',label:'MALICIOSO',  score:'38/61',unit:'DETECCIONES', sub:'Detectado como backdoor/troyano. Familia confirmada: Mirai botnet.'},
+  };
+  renderReport(ioc, cat, demos[cat]);
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ═══════════════════════════════════════════════════
+// DEMO RUN
+// ═══════════════════════════════════════════════════
+async function go(){
+  const val = document.getElementById('iocIn').value.trim();
+  if(!val) return;
+  const rawType = detectType(val)||'domain';
+  const type    = typeToCategory(rawType);
+  const btn  = document.getElementById('runBtn');
+  btn.disabled = true;
+
+  // Reset bulk results
+  document.getElementById('bulkResults').classList.remove('on');
+
+  const sources = SOURCES[type];
+  renderSrcGrid(type);
+
+  const prog = document.getElementById('prog');
+  const fill = document.getElementById('progFill');
+  const msg  = document.getElementById('progMsg');
+  prog.classList.add('on');
+
+  for(let i=0;i<sources.length;i++){
+    const s=sources[i];
+    const key='sc-'+s.name.replace(/[^a-z0-9]/gi,'_');
+    const el=document.getElementById(key);
+    if(el) el.className='src-chip q';
+    msg.textContent=`// fetch → ${s.url(val)}`;
+    fill.style.width=Math.round(((i+0.5)/sources.length)*88)+'%';
+    await new Promise(r=>setTimeout(r,340+Math.random()*280));
+    if(el) el.className='src-chip ok';
+  }
+
+  fill.style.width='100%';
+  msg.textContent='// construyendo reporte...';
+  await new Promise(r=>setTimeout(r,420));
+  prog.classList.remove('on');
+
+  const demos = {
+    ip:     {cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'62',unit:'RISK SCORE', sub:'IP activa en scanning masivo desde VPS europeo. No confirmada como amenaza dirigida.'},
+    domain: {cls:'sus',icon:'⚠',label:'SOSPECHOSO', score:'45',unit:'RISK SCORE', sub:'Dominio con contenido de seguridad ofensiva. Referenciado en herramientas de ataque.'},
+    hash:   {cls:'mal',icon:'🔴',label:'MALICIOSO',  score:'38/61',unit:'DETECCIONES', sub:'Detectado como backdoor/troyano. Familia confirmada: Mirai botnet.'},
+  };
+  const d = demos[type];
+
+  addToHistory(val, rawType, d.cls);
+  renderReport(val, type, d);
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER REPORT
+// ═══════════════════════════════════════════════════
+function mkRefLinks(type, ioc){
+  return SOURCES[type].map(s=>
+    `<a class="ref-link" href="${s.url(ioc)}" target="_blank">${extIco}${s.name}</a>`
+  ).join('');
+}
+
+function renderReport(ioc, type, d){
+  const sec = document.getElementById('results');
+  sec.classList.add('on');
+  const today = new Date().toISOString().split('T')[0];
+  const typeLabel={ip:'Dirección IPv4',domain:'Dominio',hash:'Hash SHA256'}[type];
+
+  const srcData   = SRC_DATA[type];
+  const findings  = FINDINGS_DATA[type];
+  const mitre     = MITRE_DEMO[type];
+  const timeline  = TIMELINE_DEMO[type];
+  const infra     = INFRA_DATA[type];
+  const rec       = REC_DATA[type];
+
+  const badgeMap  = {mal:'Malicioso',sus:'Sospechoso',cln:'Limpio',unk:'Sin datos'};
+
+  // Risk gauge SVG (only for numeric scores)
+  const numScore  = parseInt(d.score);
+  const gaugeHtml = !isNaN(numScore) ? `
+    <svg class="gauge-svg" width="90" height="55" viewBox="0 0 90 55">
+      <path d="M10 50 A40 40 0 0 1 80 50" fill="none" stroke="var(--b2)" stroke-width="7" stroke-linecap="round"/>
+      <path d="M10 50 A40 40 0 0 1 80 50" fill="none"
+        stroke="${numScore>=70?'var(--red)':numScore>=40?'var(--amber)':'var(--green)'}"
+        stroke-width="7" stroke-linecap="round"
+        stroke-dasharray="${Math.round(numScore/100*125.66)} 125.66"
+        style="transition:stroke-dasharray .6s ease"/>
+      <text x="45" y="52" text-anchor="middle" font-family="Space Mono,monospace" font-size="14" font-weight="700"
+        fill="${numScore>=70?'var(--red)':numScore>=40?'var(--amber)':'var(--green)'}">${numScore}</text>
+    </svg>` : '';
+
+  sec.innerHTML = `
+    <div class="verdict ${d.cls}">
+      <div class="v-icon">${d.icon}</div>
+      <div style="flex:1">
+        <div class="v-label">${d.label}</div>
+        <div class="v-sub">${d.sub}</div>
+      </div>
+      <div class="v-score">
+        ${gaugeHtml || `<div class="v-num">${d.score}</div>`}
+        <div class="v-unit">${d.unit}</div>
+      </div>
+    </div>
+
+    <div class="demo-notice">⚡ Reporte de <strong>demostración</strong>. Para análisis reales con datos en vivo, usa el <strong>Prompt Maestro</strong> — Claude hará fetch a cada plataforma y generará el reporte completo.</div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="label" style="margin-bottom:8px">// identificación</div>
+        ${infra.id.map(r=>`<div class="kv"><span class="kk">${r.k}</span><span class="kv-val" ${r.k==='IOC'?'style="color:var(--cyan)"':''}>${escHtml(r.v==='IOC'?ioc:r.v)}</span></div>`).join('')}
+        <div class="kv"><span class="kk">IOC</span><span class="kv-val" style="color:var(--cyan)">${escHtml(ioc)}</span></div>
+        <div class="kv"><span class="kk">Análisis</span><span class="kv-val">${today}</span></div>
+      </div>
+      <div class="card">
+        <div class="label" style="margin-bottom:8px">// infraestructura</div>
+        ${infra.infra.map(r=>`<div class="kv"><span class="kk">${r.k}</span><span class="kv-val">${r.v}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <!-- SOURCE TABLE -->
+    <div class="src-table">
+      <div class="src-table-head">// detalle por fuente</div>
+      ${srcData.map(s=>`
+      <div class="src-row">
+        <div class="src-name-col">${s.n}</div>
+        <span class="src-badge sb-${s.v}">${badgeMap[s.v]}</span>
+        <div class="src-detail-txt"><strong>${s.l}</strong> — ${s.d}</div>
+        <div class="ref-links" style="margin-left:auto">
+          <a class="ref-link" href="${SOURCES[type].find(x=>x.name===s.n)?.url(ioc)||'#'}" target="_blank">${extIco}Ver →</a>
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="label" style="margin-bottom:14px">⏱ timeline de actividad</div>
+      <div class="timeline">
+        ${timeline.map(t=>`
+        <div class="tl-item">
+          <div class="tl-dot ${t.color}"></div>
+          <div class="tl-date">${t.date}</div>
+          <div class="tl-title">${t.title}</div>
+          <div class="tl-detail">${t.detail}</div>
+          <div class="tl-source">${t.src}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- MITRE ATT&CK -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="label" style="margin-bottom:4px">🛡 MITRE ATT&CK mapping</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Técnicas identificadas basadas en comportamiento observado en las fuentes:</div>
+      <div class="mitre-grid">
+        ${mitre.map(m=>`
+        <div class="mitre-card">
+          <div class="mitre-tactic">${m.tactic}</div>
+          <div class="mitre-id">${m.id}</div>
+          <div class="mitre-name">${m.name}</div>
+          <div class="mitre-desc">${m.desc}</div>
+          <a class="mitre-link" href="${m.url}" target="_blank">
+            ${extIco} Ver en MITRE
+          </a>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- FINDINGS -->
+    <div class="findings-card">
+      <div class="label" style="margin-bottom:8px">// hallazgos clave</div>
+      ${findings.map(f=>`
+      <div class="finding">
+        <span class="f-badge ${f.lvl}">${f.badge}</span>
+        <div><div class="f-txt">${f.txt}</div><div class="f-src">${f.src}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <!-- ALL LINKS -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="label" style="margin-bottom:8px">🔗 links de referencia directos al IOC</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">IOC ya insertado en cada URL — un clic te lleva directo al resultado:</div>
+      <div class="ref-links">${mkRefLinks(type, ioc)}</div>
+    </div>
+
+    <!-- REC -->
+    <div class="rec-card">
+      <div class="label" style="margin-bottom:8px">// recomendación</div>
+      <div class="rec-txt">
+        <strong style="color:${rec.color}">${rec.action}</strong> — ${rec.txt}
+        <br><br>
+        <span style="color:var(--muted);font-size:12px">IOCs para pivoting:</span> <strong style="color:var(--text)">${rec.pivot}</strong>
+      </div>
+      <div class="action-row">
+        <button class="act-btn prim" onclick="copyPrompt()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          COPIAR PROMPT MAESTRO
+        </button>
+        <button class="act-btn export" onclick="exportReport('${escAttr(ioc)}','${type}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          EXPORTAR MARKDOWN
+        </button>
+        <button class="act-btn" onclick="reset()">↩ NUEVO ANÁLISIS</button>
+        <button class="act-btn" onclick="switchTab(document.querySelectorAll('.tab')[2],'history')">🕓 VER HISTORIAL</button>
+      </div>
+    </div>
+  `;
+
+  sec.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT REPORT AS MARKDOWN
+// ═══════════════════════════════════════════════════
+function exportReport(ioc, type){
+  const today = new Date().toISOString().split('T')[0];
+  const srcData  = SRC_DATA[type];
+  const findings = FINDINGS_DATA[type];
+  const mitre    = MITRE_DEMO[type];
+  const timeline = TIMELINE_DEMO[type];
+  const infra    = INFRA_DATA[type];
+  const rec      = REC_DATA[type];
+  const demos    = {
+    ip:     {label:'SOSPECHOSO',score:'62',unit:'RISK SCORE'},
+    domain: {label:'SOSPECHOSO',score:'45',unit:'RISK SCORE'},
+    hash:   {label:'MALICIOSO', score:'38/61',unit:'DETECCIONES'},
+  };
+  const d = demos[type];
+
+  let md = `# IOC Analysis Report\n\n`;
+  md += `**IOC:** \`${ioc}\`  \n**Tipo:** ${type.toUpperCase()}  \n**Fecha:** ${today}  \n**Veredicto:** ${d.label} (${d.score} ${d.unit})\n\n---\n\n`;
+
+  md += `## Identificación\n`;
+  infra.id.forEach(r=>{ md += `- **${r.k}:** ${r.v}\n`; });
+  md += `- **IOC:** ${ioc}\n\n`;
+
+  md += `## Infraestructura\n`;
+  infra.infra.forEach(r=>{ md += `- **${r.k}:** ${r.v}\n`; });
+  md += '\n';
+
+  md += `## Resumen por fuente\n\n| Fuente | Estado | Detalle |\n|--------|--------|--------|\n`;
+  srcData.forEach(s=>{ md += `| ${s.n} | ${s.v.toUpperCase()} | ${s.l} — ${s.d} |\n`; });
+  md += '\n';
+
+  md += `## Hallazgos clave\n`;
+  findings.forEach(f=>{ md += `- **[${f.badge}]** ${f.txt} *(${f.src})*\n`; });
+  md += '\n';
+
+  md += `## Timeline de actividad\n`;
+  timeline.forEach(t=>{ md += `- **${t.date}** — ${t.title}: ${t.detail} *(${t.src})*\n`; });
+  md += '\n';
+
+  md += `## MITRE ATT&CK Mapping\n\n| Táctica | ID | Técnica |\n|---------|----|---------|\n`;
+  mitre.forEach(m=>{ md += `| ${m.tactic} | [${m.id}](${m.url}) | ${m.name} |\n`; });
+  md += '\n';
+
+  md += `## Recomendación\n**${rec.action}** — ${rec.txt}\n\n**Pivoting:** ${rec.pivot}\n\n`;
+
+  md += `## Links de referencia\n`;
+  SOURCES[type].forEach(s=>{ md += `- [${s.name}](${s.url(ioc)})\n`; });
+  md += `\n---\n*Generado con IOC Analyzer v3*\n`;
+
+  // Copy to clipboard and offer download
+  navigator.clipboard.writeText(md).then(()=>{
+    showToast('✓ Markdown copiado al portapapeles');
+  }).catch(()=>{
+    // Fallback: download as file
+    const blob = new Blob([md], {type:'text/markdown'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ioc-report-${ioc.replace(/[^a-z0-9]/gi,'-').slice(0,40)}-${today}.md`;
+    a.click();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function reset(){
+  document.getElementById('iocIn').value='';
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('results').innerHTML='';
+  document.getElementById('dmsg').textContent='';
+  document.getElementById('bulkResults').classList.remove('on');
+  ['ip','ipv6','domain','md5','sha1','sha256'].forEach(t=>document.getElementById('tp-'+t).classList.remove('on'));
+  renderSrcGrid(null);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function copyPrompt(){
+  navigator.clipboard.writeText(MASTER_PROMPT).then(()=>{
+    document.querySelectorAll('.copy-master,.act-btn.prim').forEach(b=>{
+      const orig=b.innerHTML;
+      b.innerHTML='✓ COPIADO';
+      setTimeout(()=>b.innerHTML=orig,2200);
+    });
+  });
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s){
+  return String(s).replace(/'/g,"\\'");
+}
+
+// Toast notification
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
