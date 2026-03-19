@@ -241,16 +241,46 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .ref-link:hover{background:rgba(0,229,255,.12);color:var(--cyan);border-color:rgba(0,229,255,.35);}
 .ref-link svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;}
 
+/* ── CONTEXT FIELDS ──────────────────────────────── */
+.ctx-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.ctx-field{flex:1;min-width:140px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:9px 14px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text);outline:none;transition:border-color .2s;}
+.ctx-field::placeholder{color:var(--muted);}
+.ctx-field:focus{border-color:var(--cyan2);}
+
+/* ── STATUS TAGS ─────────────────────────────────── */
+.status-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;align-items:center;}
+.status-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;}
+.st-tag{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;padding:4px 12px;border-radius:20px;border:1px solid var(--b2);color:var(--muted);cursor:pointer;transition:all .15s;background:none;}
+.st-tag:hover{border-color:var(--cyan2);color:var(--text);}
+.st-tag.active.st-pen{border-color:var(--muted);color:var(--muted);background:rgba(84,110,138,.12);}
+.st-tag.active.st-mon{border-color:var(--amber);color:var(--amber);background:rgba(255,185,48,.1);}
+.st-tag.active.st-blq{border-color:var(--red);color:var(--red);background:rgba(255,82,82,.1);}
+.st-tag.active.st-fp {border-color:var(--green);color:var(--green);background:rgba(26,245,160,.1);}
+
 /* ── HISTORY ─────────────────────────────────────── */
 .hist-empty{text-align:center;padding:3rem 1rem;color:var(--muted);}
 .hist-empty-icon{font-size:36px;opacity:.3;margin-bottom:.75rem;}
 .hist-empty-txt{font-size:13px;}
-.hist-item{display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;}
+.hist-filter-bar{padding:10px 1.25rem;background:var(--s2);border-bottom:1px solid var(--b1);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.hist-filter-input{background:var(--s1);border:1px solid var(--b1);border-radius:7px;padding:6px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text);outline:none;width:160px;transition:border-color .2s;}
+.hist-filter-input:focus{border-color:var(--cyan2);}
+.hist-filter-input::placeholder{color:var(--muted);}
+.hist-status-filter{background:var(--s1);border:1px solid var(--b1);border-radius:7px;padding:5px 8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--text);outline:none;cursor:pointer;}
+.export-csv-btn{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);background:none;border:1px solid var(--b1);border-radius:6px;padding:5px 10px;cursor:pointer;transition:all .15s;margin-left:auto;}
+.export-csv-btn:hover{border-color:var(--green);color:var(--green);}
+.hist-item{display:flex;align-items:center;gap:8px;padding:9px 1.25rem;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;flex-wrap:wrap;}
 .hist-item:last-child{border-bottom:none;}
 .hist-item:hover{background:var(--s2);}
 .hist-ioc{font-family:'Space Mono',monospace;font-size:12px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hist-type{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;flex-shrink:0;background:var(--s2);border:1px solid var(--b2);color:var(--muted);}
 .hist-verdict{font-family:'Space Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.hist-cliente{font-family:'Space Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;flex-shrink:0;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);color:var(--cyan2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hist-req{font-family:'Space Mono',monospace;font-size:9px;color:var(--purple);flex-shrink:0;}
+.hist-status{font-family:'Space Mono',monospace;font-size:9px;padding:2px 7px;border-radius:20px;flex-shrink:0;border:1px solid;}
+.hs-pen{color:var(--muted);border-color:var(--muted);background:rgba(84,110,138,.08);}
+.hs-mon{color:var(--amber);border-color:var(--amber);background:rgba(255,185,48,.08);}
+.hs-blq{color:var(--red);border-color:var(--red);background:rgba(255,82,82,.08);}
+.hs-fp {color:var(--green);border-color:var(--green);background:rgba(26,245,160,.08);}
 .hist-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;}
 .hist-replay{font-size:11px;color:var(--cyan2);flex-shrink:0;opacity:0;transition:opacity .15s;}
 .hist-del{font-size:11px;color:var(--muted);flex-shrink:0;opacity:0;transition:opacity .15s;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;}
@@ -376,6 +406,10 @@ code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space M
       <span class="type-pill" id="tp-sha256">SHA256</span>
       <span class="detect-msg" id="dmsg"></span>
     </div>
+    <div class="ctx-row">
+      <input class="ctx-field" id="clienteIn" placeholder="Cliente (opcional)"/>
+      <input class="ctx-field" id="reqIn" placeholder="N° Requerimiento (opcional)"/>
+    </div>
     <button class="bulk-toggle" onclick="toggleBulk()">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>
       MODO BULK
@@ -431,6 +465,19 @@ code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space M
   <div class="card" style="padding:0;overflow:hidden">
     <div style="padding:10px 1.25rem;background:var(--s2);border-bottom:1px solid var(--b1);">
       <div class="label">// IOCs analizados — persiste entre sesiones</div>
+    </div>
+    <div class="hist-filter-bar">
+      <input class="hist-filter-input" id="filterCliente" placeholder="Filtrar por cliente..." oninput="renderHistory()"/>
+      <select class="hist-status-filter" id="filterStatus" onchange="renderHistory()">
+        <option value="">Todos los estados</option>
+        <option value="pen">PENDIENTE</option>
+        <option value="mon">MONITOREANDO</option>
+        <option value="blq">BLOQUEADO</option>
+        <option value="fp">FALSO POSITIVO</option>
+      </select>
+      <button class="export-csv-btn" onclick="exportHistoryCSV()">
+        ↓ CSV
+      </button>
     </div>
     <div id="histList"></div>
     <div class="hist-clear" id="histClearRow" style="display:none">
@@ -975,21 +1022,42 @@ function renderRefTab(){
 function renderHistory(){
   const el = document.getElementById('histList');
   const cr = document.getElementById('histClearRow');
+  const fCliente = (document.getElementById('filterCliente')?.value||'').toLowerCase().trim();
+  const fStatus  = document.getElementById('filterStatus')?.value||'';
+
+  let filtered = iocHistory.map((h,i)=>({...h,_idx:i}));
+  if(fCliente) filtered = filtered.filter(h=>h.cliente.toLowerCase().includes(fCliente));
+  if(fStatus)  filtered = filtered.filter(h=>h.status===fStatus);
+
   if(!iocHistory.length){
     el.innerHTML=`<div class="hist-empty"><div class="hist-empty-icon">🕓</div><div class="hist-empty-txt">El historial persiste entre sesiones — aparecerá aquí al analizar tu primer IOC</div></div>`;
     cr.style.display='none';
     return;
   }
   cr.style.display='flex';
-  el.innerHTML = iocHistory.slice().reverse().map((h,i)=>{
-    const ri = iocHistory.length-1-i;
+
+  const statusLabel={pen:'PENDIENTE',mon:'MONITOREANDO',blq:'BLOQUEADO',fp:'FALSO POSITIVO'};
+  const statusCls  ={pen:'hs-pen',mon:'hs-mon',blq:'hs-blq',fp:'hs-fp'};
+
+  if(!filtered.length){
+    el.innerHTML=`<div class="hist-empty"><div class="hist-empty-icon">🔍</div><div class="hist-empty-txt">Sin resultados para los filtros aplicados</div></div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.slice().reverse().map(h=>{
+    const ri = h._idx;
     const vc={mal:'sb-mal',sus:'sb-sus',cln:'sb-cln',unk:'sb-unk'}[h.cls];
     const vl={mal:'MALICIOSO',sus:'SOSPECHOSO',cln:'LIMPIO',unk:'DESCONOCIDO'}[h.cls];
     const ts = h.date ? `${h.date} ${h.time}` : h.time;
+    const sc = statusCls[h.status||'pen'];
+    const sl = statusLabel[h.status||'pen'];
     return `<div class="hist-item" onclick="replayFromHistory(${ri})">
       <div class="hist-ioc">${escHtml(h.ioc)}</div>
       <span class="hist-type">${h.type.toUpperCase()}</span>
+      ${h.cliente?`<span class="hist-cliente" title="${escHtml(h.cliente)}">${escHtml(h.cliente)}</span>`:''}
+      ${h.req?`<span class="hist-req">#${escHtml(h.req)}</span>`:''}
       <span class="hist-verdict src-badge ${vc}">${vl}</span>
+      <span class="hist-status ${sc}">${sl}</span>
       <span class="hist-time">${ts}</span>
       <span class="hist-replay">↩ re-abrir</span>
       <button class="hist-del" onclick="deleteHistEntry(event,${ri})">✕</button>
@@ -1020,16 +1088,23 @@ function updateHistBadge(){
   else b.style.display='none';
 }
 
-function addToHistory(ioc, type, cls){
+function addToHistory(ioc, type, cls, cliente, req){
   const now = new Date();
   const date = now.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit'});
   const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  // avoid duplicate consecutive entries
   if(iocHistory.length && iocHistory[iocHistory.length-1].ioc === ioc) return;
-  iocHistory.push({ioc, type, cls, time, date});
-  if(iocHistory.length > 100) iocHistory.shift(); // cap at 100 entries
+  iocHistory.push({ioc, type, cls, time, date, cliente:cliente||'', req:req||'', status:'pen'});
+  if(iocHistory.length > 100) iocHistory.shift();
   updateHistBadge();
   saveHistory();
+}
+
+function setStatus(idx, status){
+  iocHistory[idx].status = status;
+  saveHistory();
+  renderHistory();
+  // update status row in current report if same IOC
+  renderStatusRow(idx);
 }
 
 function replayFromHistory(idx){
@@ -1143,9 +1218,11 @@ async function go(){
     hash:   {cls:'mal',icon:'🔴',label:'MALICIOSO',  score:'38/61',unit:'DETECCIONES', sub:'Detectado como backdoor/troyano. Familia confirmada: Mirai botnet.'},
   };
   const d = demos[type];
+  const cliente = document.getElementById('clienteIn').value.trim();
+  const req     = document.getElementById('reqIn').value.trim();
 
-  addToHistory(val, rawType, d.cls);
-  renderReport(val, type, d);
+  addToHistory(val, rawType, d.cls, cliente, req);
+  renderReport(val, type, d, cliente, req);
   btn.disabled = false;
 }
 
@@ -1158,11 +1235,22 @@ function mkRefLinks(type, ioc){
   ).join('');
 }
 
-function renderReport(ioc, type, d){
+function renderStatusRow(histIdx){
+  const el = document.getElementById('statusRowEl');
+  if(!el || histIdx === undefined) return;
+  const h = iocHistory[histIdx];
+  if(!h) return;
+  const tags = [{k:'pen',l:'PENDIENTE'},{k:'mon',l:'MONITOREANDO'},{k:'blq',l:'BLOQUEADO'},{k:'fp',l:'FALSO POSITIVO'}];
+  el.innerHTML = tags.map(t=>`<button class="st-tag st-${t.k}${(h.status||'pen')===t.k?' active':''}" onclick="setStatus(${histIdx},'${t.k}')">${t.l}</button>`).join('');
+}
+
+function renderReport(ioc, type, d, cliente, req){
   const sec = document.getElementById('results');
   sec.classList.add('on');
   const today = new Date().toISOString().split('T')[0];
   const typeLabel={ip:'Dirección IPv4',domain:'Dominio',hash:'Hash SHA256'}[type];
+  const histIdx = iocHistory.length - 1; // just added
+  const tags = [{k:'pen',l:'PENDIENTE'},{k:'mon',l:'MONITOREANDO'},{k:'blq',l:'BLOQUEADO'},{k:'fp',l:'FALSO POSITIVO'}];
 
   const srcData   = SRC_DATA[type];
   const findings  = FINDINGS_DATA[type];
@@ -1201,6 +1289,23 @@ function renderReport(ioc, type, d){
     </div>
 
     <div class="demo-notice">⚡ Reporte de <strong>demostración</strong>. Para análisis reales con datos en vivo, usa el <strong>Prompt Maestro</strong> — Claude hará fetch a cada plataforma y generará el reporte completo.</div>
+
+    <!-- ESTADO + CONTEXTO -->
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+        <div style="flex:1;min-width:180px">
+          <div class="label" style="margin-bottom:8px">// contexto del caso</div>
+          <div class="kv"><span class="kk">Cliente</span><span class="kv-val" style="color:var(--cyan)">${escHtml(cliente||'—')}</span></div>
+          <div class="kv"><span class="kk">Requerimiento</span><span class="kv-val" style="color:var(--purple)">${escHtml(req||'—')}</span></div>
+        </div>
+        <div style="flex:2;min-width:220px">
+          <div class="label" style="margin-bottom:8px">// estado del IOC</div>
+          <div class="status-row" id="statusRowEl">
+            ${tags.map(t=>`<button class="st-tag st-${t.k}${t.k==='pen'?' active':''}" onclick="setStatus(${histIdx},'${t.k}')">${t.l}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="two-col">
       <div class="card">
@@ -1292,7 +1397,7 @@ function renderReport(ioc, type, d){
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           COPIAR PROMPT MAESTRO
         </button>
-        <button class="act-btn export" onclick="exportReport('${escAttr(ioc)}','${type}')">
+        <button class="act-btn export" onclick="exportReport('${escAttr(ioc)}','${type}','${escAttr(cliente||'')}','${escAttr(req||'')}')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           EXPORTAR MARKDOWN
         </button>
@@ -1308,7 +1413,26 @@ function renderReport(ioc, type, d){
 // ═══════════════════════════════════════════════════
 // EXPORT REPORT AS MARKDOWN
 // ═══════════════════════════════════════════════════
-function exportReport(ioc, type){
+function exportHistoryCSV(){
+  if(!iocHistory.length){ showToast('El historial está vacío'); return; }
+  const statusLabel={pen:'PENDIENTE',mon:'MONITOREANDO',blq:'BLOQUEADO',fp:'FALSO POSITIVO'};
+  const verdictLabel={mal:'MALICIOSO',sus:'SOSPECHOSO',cln:'LIMPIO',unk:'DESCONOCIDO'};
+  const header = ['Fecha','Hora','IOC','Tipo','Cliente','Requerimiento','Veredicto','Estado'];
+  const rows = iocHistory.slice().reverse().map(h=>[
+    h.date||'',h.time||'',h.ioc,h.type.toUpperCase(),
+    h.cliente||'',h.req||'',
+    verdictLabel[h.cls]||'',statusLabel[h.status||'pen']||''
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','),...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ioc-historial-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('✓ CSV descargado');
+}
+
+function exportReport(ioc, type, cliente, req){
   const today = new Date().toISOString().split('T')[0];
   const srcData  = SRC_DATA[type];
   const findings = FINDINGS_DATA[type];
@@ -1323,8 +1447,17 @@ function exportReport(ioc, type){
   };
   const d = demos[type];
 
+  const lastEntry = iocHistory[iocHistory.length-1];
+  const cli = lastEntry?.cliente||'';
+  const rq  = lastEntry?.req||'';
+  const statusLabel={pen:'PENDIENTE',mon:'MONITOREANDO',blq:'BLOQUEADO',fp:'FALSO POSITIVO'};
+  const st  = statusLabel[lastEntry?.status||'pen'];
+
   let md = `# IOC Analysis Report\n\n`;
-  md += `**IOC:** \`${ioc}\`  \n**Tipo:** ${type.toUpperCase()}  \n**Fecha:** ${today}  \n**Veredicto:** ${d.label} (${d.score} ${d.unit})\n\n---\n\n`;
+  md += `**IOC:** \`${ioc}\`  \n**Tipo:** ${type.toUpperCase()}  \n**Fecha:** ${today}  \n**Veredicto:** ${d.label} (${d.score} ${d.unit})\n`;
+  if(cli) md += `**Cliente:** ${cli}  \n`;
+  if(rq)  md += `**Requerimiento:** ${rq}  \n`;
+  md += `**Estado:** ${st}\n\n---\n\n`;
 
   md += `## Identificación\n`;
   infra.id.forEach(r=>{ md += `- **${r.k}:** ${r.v}\n`; });
