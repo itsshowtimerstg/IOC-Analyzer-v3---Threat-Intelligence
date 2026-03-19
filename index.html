@@ -335,6 +335,22 @@ code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space M
 .bulk-row:hover{background:var(--s2);}
 .bulk-ioc{font-family:'Space Mono',monospace;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
+/* ── PIN GATE ────────────────────────────────────── */
+.pin-gate{text-align:center;padding:2.5rem 1.5rem;}
+.pin-gate-icon{font-size:32px;margin-bottom:1rem;opacity:.6;}
+.pin-gate-txt{font-size:13px;color:var(--muted);margin-bottom:1.25rem;line-height:1.6;}
+.pin-input{background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:11px 16px;font-family:'Space Mono',monospace;font-size:16px;color:var(--text);outline:none;text-align:center;letter-spacing:.3em;width:160px;transition:border-color .2s;}
+.pin-input:focus{border-color:var(--cyan2);}
+.pin-btn{background:var(--cyan);color:#000;border:none;border-radius:8px;padding:11px 22px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.07em;cursor:pointer;margin-left:8px;transition:filter .15s;}
+.pin-btn:hover{filter:brightness(1.1);}
+.pin-err{font-family:'Space Mono',monospace;font-size:11px;color:var(--red);margin-top:8px;height:16px;}
+
+/* ── DEFANG ──────────────────────────────────────── */
+.defang-bar{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.defang-val{font-family:'Space Mono',monospace;font-size:12px;color:var(--amber);background:rgba(255,185,48,.08);border:1px solid rgba(255,185,48,.25);border-radius:7px;padding:5px 12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.defang-copy{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;padding:5px 12px;border-radius:7px;border:1px solid rgba(255,185,48,.4);background:transparent;color:var(--amber);cursor:pointer;flex-shrink:0;transition:all .15s;}
+.defang-copy:hover{background:rgba(255,185,48,.1);}
+
 /* ── TOAST ───────────────────────────────────────── */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s1);border:1px solid var(--b2);border-radius:9px;padding:10px 20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text);box-shadow:0 8px 32px var(--shadow);opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -447,7 +463,20 @@ code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space M
 
 <!-- ══════════════ TAB: PROMPT ══════════════ -->
 <div id="tab-prompt" style="display:none">
-  <div class="card">
+  <!-- PIN GATE -->
+  <div class="card" id="pinGate">
+    <div class="pin-gate">
+      <div class="pin-gate-icon">🔒</div>
+      <div class="pin-gate-txt">El Prompt Maestro está protegido.<br>Ingresa el PIN para acceder.</div>
+      <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px">
+        <input class="pin-input" id="pinInput" type="password" maxlength="8" placeholder="····" onkeydown="if(event.key==='Enter')checkPin()"/>
+        <button class="pin-btn" onclick="checkPin()">ACCEDER</button>
+      </div>
+      <div class="pin-err" id="pinErr"></div>
+    </div>
+  </div>
+  <!-- PROMPT CONTENT (hidden until PIN ok) -->
+  <div class="card" id="promptContent" style="display:none">
     <div class="label" style="margin-bottom:10px">// prompt maestro v3 — incluye MITRE ATT&CK + Timeline + Links directos</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px">
       Pega este prompt como <strong style="color:var(--text)">primer mensaje</strong> en Claude. Desde ese momento solo escribe <code>ANALIZAR: [IOC]</code> para obtener el reporte completo con MITRE mapping, timeline de actividad y links de referencia directos al IOC.
@@ -457,6 +486,9 @@ code{background:var(--s2);padding:1px 5px;border-radius:3px;font-family:'Space M
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       COPIAR PROMPT MAESTRO AL PORTAPAPELES
     </button>
+    <div style="text-align:right;margin-top:8px">
+      <button onclick="lockPrompt()" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;letter-spacing:.06em;">🔒 BLOQUEAR</button>
+    </div>
   </div>
 </div>
 
@@ -950,6 +982,7 @@ function switchTab(el, id){
     document.getElementById('tab-'+t).style.display = t===id?'block':'none';
   });
   if(id==='history') renderHistory();
+  if(id==='prompt')  checkPinSession();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1251,6 +1284,7 @@ function renderReport(ioc, type, d, cliente, req){
   const typeLabel={ip:'Dirección IPv4',domain:'Dominio',hash:'Hash SHA256'}[type];
   const histIdx = iocHistory.length - 1; // just added
   const tags = [{k:'pen',l:'PENDIENTE'},{k:'mon',l:'MONITOREANDO'},{k:'blq',l:'BLOQUEADO'},{k:'fp',l:'FALSO POSITIVO'}];
+  const iocDefanged = defang(ioc);
 
   const srcData   = SRC_DATA[type];
   const findings  = FINDINGS_DATA[type];
@@ -1297,6 +1331,13 @@ function renderReport(ioc, type, d, cliente, req){
           <div class="label" style="margin-bottom:8px">// contexto del caso</div>
           <div class="kv"><span class="kk">Cliente</span><span class="kv-val" style="color:var(--cyan)">${escHtml(cliente||'—')}</span></div>
           <div class="kv"><span class="kk">Requerimiento</span><span class="kv-val" style="color:var(--purple)">${escHtml(req||'—')}</span></div>
+          <div class="kv" style="border-bottom:none;padding-top:8px;flex-direction:column;align-items:flex-start;gap:4px">
+            <span class="kk">IOC defangeado</span>
+            <div class="defang-bar">
+              <span class="defang-val">${escHtml(defang(ioc))}</span>
+              <button class="defang-copy" onclick="copyDefang('${escAttr(ioc)}')">COPIAR</button>
+            </div>
+          </div>
         </div>
         <div style="flex:2;min-width:220px">
           <div class="label" style="margin-bottom:8px">// estado del IOC</div>
@@ -1524,6 +1565,61 @@ function copyPrompt(){
       setTimeout(()=>b.innerHTML=orig,2200);
     });
   });
+}
+
+// ═══════════════════════════════════════════════════
+// DEFANG
+// ═══════════════════════════════════════════════════
+function defang(ioc){
+  return ioc
+    .replace(/\./g,'[.]')
+    .replace(/^https?:\/\//i, s=>s.replace('://','[://]'))
+    .replace(/^(hxxps?)/i,'$1');
+}
+
+function copyDefang(ioc){
+  navigator.clipboard.writeText(defang(ioc)).then(()=>{
+    showToast('✓ IOC defangeado copiado');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// PIN GATE
+// ═══════════════════════════════════════════════════
+const PIN_KEY  = 'ioc-pin-ok';
+const CORRECT_PIN = '1337'; // cambia esto
+
+function checkPin(){
+  const val = document.getElementById('pinInput').value;
+  if(val === CORRECT_PIN){
+    sessionStorage.setItem(PIN_KEY,'1');
+    document.getElementById('pinGate').style.display='none';
+    document.getElementById('promptContent').style.display='block';
+    document.getElementById('pinErr').textContent='';
+  } else {
+    const err = document.getElementById('pinErr');
+    err.textContent='PIN incorrecto';
+    document.getElementById('pinInput').value='';
+    setTimeout(()=>err.textContent='',2000);
+  }
+}
+
+function lockPrompt(){
+  sessionStorage.removeItem(PIN_KEY);
+  document.getElementById('pinGate').style.display='block';
+  document.getElementById('promptContent').style.display='none';
+  document.getElementById('pinInput').value='';
+}
+
+// Al abrir el tab de prompt, verificar si ya autenticó en esta sesión
+function checkPinSession(){
+  if(sessionStorage.getItem(PIN_KEY)==='1'){
+    document.getElementById('pinGate').style.display='none';
+    document.getElementById('promptContent').style.display='block';
+  } else {
+    document.getElementById('pinGate').style.display='block';
+    document.getElementById('promptContent').style.display='none';
+  }
 }
 
 function escHtml(s){
