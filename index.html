@@ -581,177 +581,520 @@ const SOURCES = {
   ],
 };
 
-// MITRE ATT&CK demo data por tipo
-const MITRE_DEMO = {
-  ip:[
-    {tactic:'Command & Control', id:'T1071',  name:'Application Layer Protocol', desc:'Comunicación C2 usando HTTP/S para evadir detección por tráfico legítimo.', url:'https://attack.mitre.org/techniques/T1071/'},
-    {tactic:'Discovery',         id:'T1046',  name:'Network Service Scanning',   desc:'Escaneo activo de puertos y servicios expuestos en la red objetivo.',       url:'https://attack.mitre.org/techniques/T1046/'},
-    {tactic:'Credential Access', id:'T1110',  name:'Brute Force',                desc:'Intentos masivos de fuerza bruta contra SSH (puerto 22) y RDP.',            url:'https://attack.mitre.org/techniques/T1110/'},
-    {tactic:'Defense Evasion',   id:'T1090',  name:'Proxy',                       desc:'Uso de VPS/hosting para enmascarar la infraestructura real del atacante.',   url:'https://attack.mitre.org/techniques/T1090/'},
-  ],
-  domain:[
-    {tactic:'Command & Control', id:'T1568',  name:'Dynamic Resolution',          desc:'Uso de dominios generados o rotados para mantener comunicación C2.',         url:'https://attack.mitre.org/techniques/T1568/'},
-    {tactic:'Initial Access',    id:'T1566',  name:'Phishing',                    desc:'Dominio utilizado en campañas de phishing para captura de credenciales.',    url:'https://attack.mitre.org/techniques/T1566/'},
-    {tactic:'Execution',         id:'T1059',  name:'Command & Scripting Interpreter', desc:'Scripts de powershell/bash descargados desde este dominio.',            url:'https://attack.mitre.org/techniques/T1059/'},
-    {tactic:'Resource Dev.',     id:'T1583',  name:'Acquire Infrastructure',      desc:'Infraestructura adquirida para soporte de operaciones maliciosas.',          url:'https://attack.mitre.org/techniques/T1583/'},
-  ],
-  hash:[
-    {tactic:'Execution',         id:'T1059.003', name:'Windows Command Shell',    desc:'Ejecuta comandos via cmd.exe para persistencia y movimiento lateral.',      url:'https://attack.mitre.org/techniques/T1059/003/'},
-    {tactic:'Persistence',       id:'T1547.001', name:'Registry Run Keys',        desc:'Modifica claves de registro para ejecución automática al inicio.',          url:'https://attack.mitre.org/techniques/T1547/001/'},
-    {tactic:'Defense Evasion',   id:'T1027',  name:'Obfuscated Files',            desc:'Código obfuscado para evadir detección por análisis estático.',              url:'https://attack.mitre.org/techniques/T1027/'},
-    {tactic:'Exfiltration',      id:'T1041',  name:'Exfiltration Over C2',        desc:'Datos exfiltrados por el mismo canal C2 cifrado.',                          url:'https://attack.mitre.org/techniques/T1041/'},
-  ],
-};
+// ─── SCENARIO ENGINE ──────────────────────────────────────────────────────────
+// Cada IOC recibe un escenario consistente y distinto basado en su valor.
+// El mismo IOC siempre muestra los mismos datos; IOCs distintos muestran datos distintos.
 
-// Timeline demo data
-const TIMELINE_DEMO = {
-  ip:[
-    {date:'2026-03-17',color:'red', title:'Último reporte de abuso', detail:'47 reportes en AbuseIPDB — webattack, SSH brute force', src:'AbuseIPDB'},
-    {date:'2026-03-10',color:'amb', title:'Detectado en escaneo masivo', detail:'GreyNoise confirma actividad de scanning en puertos 22, 80, 443, 8080', src:'GreyNoise'},
-    {date:'2026-02-28',color:'pur', title:'Asociado a pulses en OTX', detail:'3 pulses activos — etiquetas: scanner, brute-force, ssh', src:'OTX AlienVault'},
-    {date:'2026-01-15',color:'cyn', title:'Primera vista en VirusTotal', detail:'2/94 detecciones — Seclookup: Malicious, ForcePoint: Suspicious', src:'VirusTotal'},
-    {date:'2025-11-03',color:'grn', title:'IP registrada en Shodan', detail:'Puertos 22, 80, 443, 8080 expuestos. ASN: AS20473 Vultr Holdings', src:'Shodan'},
-  ],
-  domain:[
-    {date:'2026-03-18',color:'amb', title:'Análisis actual', detail:'1/94 detecciones en VT — Seclookup: Malicious', src:'VirusTotal'},
-    {date:'2026-03-01',color:'red', title:'Referenciado en webshell activo', detail:'Archivo c37.php (33/62 detecciones) descarga payloads desde este dominio', src:'VirusTotal Files'},
-    {date:'2025-12-10',color:'pur', title:'Aparece en herramienta ofensiva', detail:'gef.py y LazyOwn referencian el dominio como fuente de exploits', src:'Hybrid Analysis'},
-    {date:'2024-10-24',color:'cyn', title:'Indexado en Cisco Umbrella', detail:'Rank 801,529 — tráfico legítimo consistente de seguridad ofensiva', src:'Cisco Umbrella'},
-    {date:'2009-02-05',color:'grn', title:'Registro del dominio', detail:'Registrado via Name106, Inc. — 17 años de antigüedad', src:'WHOIS'},
-  ],
-  hash:[
-    {date:'2026-03-15',color:'red', title:'Detección activa confirmada', detail:'38/61 motores — familia: Mirai.botnet, variante BASHLITE', src:'VirusTotal'},
-    {date:'2026-03-10',color:'red', title:'Sandbox dinámico — Hybrid Analysis', detail:'Verdict: Malicious. Crea proceso hijo, modifica registro, contacta C2 en 185.220.x.x', src:'Hybrid Analysis'},
-    {date:'2026-03-08',color:'amb', title:'Subido a MalwareBazaar', detail:'Etiquetas: botnet, mirai, arm. Origen: feed automatizado abuse.ch', src:'MalwareBazaar'},
-    {date:'2026-03-07',color:'pur', title:'Asociado a pulse OTX', detail:'Pulse: "Mirai Q1 2026 wave" — 47 IOCs relacionados, actor: unknown', src:'OTX AlienVault'},
-    {date:'2026-03-06',color:'cyn', title:'Primera vista reportada', detail:'ANY.RUN: ejecuta /bin/sh, intenta conexión a 23 IPs en 5 minutos', src:'ANY.RUN'},
-  ],
-};
+function seedFromIoc(str){
+  let h=0;
+  for(let i=0;i<str.length;i++) h=Math.imul(31,h)+str.charCodeAt(i)|0;
+  return Math.abs(h);
+}
 
-// Source detail data per type
-const SRC_DATA = {
-  ip:[
-    {n:'VirusTotal',    v:'sus',l:'2/94 detecciones',    d:'Seclookup: Malicious, Forcepoint: Suspicious'},
-    {n:'AbuseIPDB',     v:'sus',l:'47 reportes',         d:'Confidence 73% — webattack, SSH brute force'},
-    {n:'Shodan',        v:'unk',l:'4 puertos',            d:'22, 80, 443, 8080 — OpenSSH 8.9, nginx/1.24'},
-    {n:'GreyNoise',     v:'cln',l:'Mass scanner',         d:'Benign — escaneando internet masivamente'},
-    {n:'OTX AlienVault',v:'sus',l:'3 pulses',            d:'Tags: scanner, brute-force, ssh'},
-    {n:'IPinfo',        v:'unk',l:'AS20473 Vultr',        d:'NL, Amsterdam — tipo: hosting'},
-    {n:'BGP Toolkit',   v:'unk',l:'104.238.x.0/24',      d:'Prefix registrado hace 4 años'},
-    {n:'ThreatFox',     v:'cln',l:'Sin registros',        d:'No aparece en feeds activos'},
-  ],
-  domain:[
-    {n:'VirusTotal',    v:'sus',l:'1/94 detecciones',    d:'Seclookup: Malicious'},
-    {n:'URLScan.io',    v:'cln',l:'12 escaneos',          d:"Último: 2026-03-10, sin recursos externos sospechosos"},
-    {n:'OTX AlienVault',v:'cln',l:'Sin pulses',          d:'No asociado a campañas documentadas'},
-    {n:'Shodan',        v:'unk',l:'Puertos 80/443',       d:"Linode, nginx, Let's Encrypt cert"},
-    {n:'Pulsedive',     v:'sus',l:'Risk: medium',         d:'Referenciado en 2 feeds de seguridad ofensiva'},
-    {n:'ThreatFox',     v:'cln',l:'Sin registros',        d:'No en feeds de malware activo'},
-    {n:'URLhaus',       v:'cln',l:'Sin registros',        d:'No distribuye malware directamente'},
-    {n:'IBM X-Force',   v:'cln',l:'Score: 1/10',          d:'Categoría: Security Research'},
-    {n:'Palo Alto WF',  v:'unk',l:'Búsqueda manual',         d:'Ingresar IOC en el sitio — Category + Risk Level (Low/Medium/High-Risk)'},
-  ],
-  hash:[
-    {n:'VirusTotal',     v:'mal',l:'38/61 detecciones',  d:'Familia: Mirai.botnet — BASHLITE variant'},
-    {n:'Hybrid Analysis',v:'mal',l:'Malicious',           d:'Crea proceso hijo, modifica registro Run Keys'},
-    {n:'MalwareBazaar',  v:'mal',l:'Confirmado',          d:'Tags: botnet, mirai, arm — origen: abuse.ch feed'},
-    {n:'OTX AlienVault', v:'mal',l:'2 pulses',            d:'Pulse: Mirai Q1 2026 — 47 IOCs relacionados'},
-    {n:'ThreatFox',      v:'mal',l:'C2 confirmado',       d:'C2: 185.220.x.x:4444 — familia: Mirai'},
-    {n:'ANY.RUN',        v:'mal',l:'Score: 100',          d:'Ejecuta /bin/sh, conecta a 23 IPs en 5 min'},
-    {n:'Triage',         v:'mal',l:'Malicious',           d:'Score 10/10, detecta evasión de sandbox'},
-    {n:'IntezerAnalyze', v:'mal',l:'Mirai lineage',       d:'80% similaridad genómica con Mirai.B'},
-  ],
-};
+function daysAgo(n){
+  const d=new Date(); d.setDate(d.getDate()-n);
+  return d.toISOString().split('T')[0];
+}
 
-// Findings per type
-const FINDINGS_DATA = {
-  ip:[
-    {lvl:'f-me',badge:'MEDIO', txt:'Reportado 47 veces en AbuseIPDB — categorías: webattack, SSH brute force', src:'AbuseIPDB · Confidence 73%'},
-    {lvl:'f-me',badge:'MEDIO', txt:'2/94 motores en VirusTotal — 92 limpios, baja prevalencia pero señal presente', src:'VirusTotal · último análisis hace 2h'},
-    {lvl:'f-in',badge:'INFO',  txt:'GreyNoise: "mass internet scanner" — no amenaza dirigida, ruido de red generalizado', src:'GreyNoise Intelligence'},
-    {lvl:'f-lo',badge:'BAJO',  txt:'Sin campañas documentadas en OTX ni en ThreatFox — no asociado a actores conocidos', src:'OTX AlienVault + ThreatFox abuse.ch'},
-  ],
-  domain:[
-    {lvl:'f-hi',badge:'ALTO',  txt:'Referenciado en webshell c37.php (33/62 detecciones) como servidor de payloads', src:'VirusTotal Files · 2026-03-01'},
-    {lvl:'f-me',badge:'MEDIO', txt:'1/94 motores en VirusTotal — Seclookup categoriza como Malicious', src:'VirusTotal · análisis reciente'},
-    {lvl:'f-me',badge:'MEDIO', txt:'Pulsedive risk: medium — aparece en 2 feeds de seguridad ofensiva activos', src:'Pulsedive'},
-    {lvl:'f-in',badge:'INFO',  txt:'URLScan.io: sin recursos externos sospechosos en 12 escaneos recientes', src:'URLScan.io'},
-  ],
-  hash:[
-    {lvl:'f-hi',badge:'ALTO',  txt:'38/61 motores en VirusTotal confirman familia Mirai.botnet — BASHLITE variant', src:'VirusTotal · 38/61 detecciones'},
-    {lvl:'f-hi',badge:'ALTO',  txt:'Sandbox dinámico: crea proceso hijo, modifica Run Keys, contacta C2 en 185.220.x.x', src:'Hybrid Analysis · Verdict: Malicious'},
-    {lvl:'f-me',badge:'MEDIO', txt:'Subido a MalwareBazaar desde feed automatizado abuse.ch — tags: botnet, mirai, arm', src:'MalwareBazaar'},
-    {lvl:'f-in',badge:'INFO',  txt:'Asociado a pulse OTX "Mirai Q1 2026" — 47 IOCs relacionados en la misma campaña', src:'OTX AlienVault'},
-  ],
-};
+function getScenario(ioc, type){
+  const seed = seedFromIoc(ioc);
+  const idx  = seed % 3;
 
-// Infrastructure info per type
-const INFRA_DATA = {
-  ip:{
-    id:[
-      {k:'ASN',          v:'AS20473 — Vultr Holdings LLC'},
-      {k:'País',         v:'NL — Netherlands'},
-      {k:'Tipo de red',  v:'VPS / Cloud Hosting'},
-      {k:'Puertos',      v:'22, 80, 443, 8080'},
-    ],
-    infra:[
-      {k:'Cert TLS',     v:"Let's Encrypt — *.compute-1.amazonaws.com"},
-      {k:'Sistema',      v:'OpenSSH 8.9p1, nginx/1.24'},
-      {k:'Reputación',   v:'Mass-scanner (GreyNoise)'},
-      {k:'Primera vista',v:'2025-11-03'},
-    ],
-  },
-  domain:{
-    id:[
-      {k:'IOC',          v:'exploit.education'},
-      {k:'Tipo',         v:'Dominio'},
-      {k:'Registrar',    v:'Name106, Inc.'},
-      {k:'Registrado',   v:'2009-02-05'},
-    ],
-    infra:[
-      {k:'IP actual',    v:'45.33.32.156 (Linode)'},
-      {k:'Cert TLS',     v:"Let's Encrypt, válido"},
-      {k:'Rango CIDR',   v:'45.33.32.0/24'},
-      {k:'Antigüedad',   v:'17 años'},
-    ],
-  },
-  hash:{
-    id:[
-      {k:'Tipo archivo', v:'ELF 32-bit ARM'},
-      {k:'Tamaño',       v:'87,552 bytes'},
-      {k:'Familia',      v:'Mirai.botnet / BASHLITE'},
-      {k:'Primera vista',v:'2026-03-06'},
-    ],
-    infra:[
-      {k:'Empaquetado',  v:'No (sin packer)'},
-      {k:'C2 observado', v:'185.220.x.x:4444'},
-      {k:'Sandbox score',v:'10/10 (Triage)'},
-      {k:'Evasión',      v:'Anti-sandbox detectado'},
-    ],
-  },
-};
+  // ── IP SCENARIOS ────────────────────────────────────
+  const ip = [
+    // 0: Scanner / botnet desde VPS europeo
+    {
+      d:{cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'62',unit:'RISK SCORE',
+        sub:'IP activa en scanning masivo desde VPS europeo. No confirmada como amenaza dirigida.'},
+      mitre:[
+        {tactic:'Command & Control',id:'T1071',  name:'Application Layer Protocol',  desc:'Comunicación C2 usando HTTP/S para evadir detección por tráfico legítimo.', url:'https://attack.mitre.org/techniques/T1071/'},
+        {tactic:'Discovery',        id:'T1046',  name:'Network Service Scanning',    desc:'Escaneo activo de puertos y servicios expuestos en la red objetivo.',       url:'https://attack.mitre.org/techniques/T1046/'},
+        {tactic:'Credential Access',id:'T1110',  name:'Brute Force',                 desc:'Intentos masivos de fuerza bruta contra SSH (puerto 22) y RDP.',            url:'https://attack.mitre.org/techniques/T1110/'},
+        {tactic:'Defense Evasion',  id:'T1090',  name:'Proxy',                       desc:'Uso de VPS/hosting para enmascarar la infraestructura real del atacante.',   url:'https://attack.mitre.org/techniques/T1090/'},
+      ],
+      timeline:[
+        {date:daysAgo(2), color:'red',title:'Último reporte de abuso',       detail:'47 reportes en AbuseIPDB — webattack, SSH brute force',                           src:'AbuseIPDB'},
+        {date:daysAgo(9), color:'amb',title:'Detectado en escaneo masivo',   detail:'GreyNoise confirma scanning masivo en puertos 22, 80, 443, 8080',                 src:'GreyNoise'},
+        {date:daysAgo(19),color:'pur',title:'Asociado a pulses en OTX',      detail:'3 pulses activos — etiquetas: scanner, brute-force, ssh',                         src:'OTX AlienVault'},
+        {date:daysAgo(63),color:'cyn',title:'Primera vista en VirusTotal',   detail:'2/94 detecciones — Seclookup: Malicious, ForcePoint: Suspicious',                 src:'VirusTotal'},
+        {date:daysAgo(137),color:'grn',title:'IP indexada en Shodan',        detail:'Puertos 22, 80, 443, 8080 expuestos — ASN: AS20473 Vultr Holdings',               src:'Shodan'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'sus',l:'2/94 detecciones',  d:'Seclookup: Malicious, Forcepoint: Suspicious'},
+        {n:'AbuseIPDB',     v:'sus',l:'47 reportes',       d:'Confidence 73% — webattack, SSH brute force'},
+        {n:'Shodan',        v:'unk',l:'4 puertos abiertos',d:'22, 80, 443, 8080 — OpenSSH 8.9p1, nginx/1.24'},
+        {n:'GreyNoise',     v:'cln',l:'Mass scanner',      d:'Benign — escaneando internet masivamente, no threat dirigida'},
+        {n:'OTX AlienVault',v:'sus',l:'3 pulses',          d:'Tags: scanner, brute-force, ssh'},
+        {n:'IPinfo',        v:'unk',l:'AS20473 Vultr',     d:'NL, Amsterdam — tipo: hosting / VPS'},
+        {n:'BGP Toolkit',   v:'unk',l:'Prefijo /24',       d:'Subnet asignada hace 4 años — AS20473'},
+        {n:'ThreatFox',     v:'cln',l:'Sin registros',     d:'No aparece en feeds activos de C2 o malware'},
+      ],
+      findings:[
+        {lvl:'f-me',badge:'MEDIO',txt:'47 reportes en AbuseIPDB — categorías: webattack, SSH brute force, Confidence 73%',src:'AbuseIPDB'},
+        {lvl:'f-me',badge:'MEDIO',txt:'2/94 motores VirusTotal — señal baja pero presente en múltiples vendors',           src:'VirusTotal · análisis reciente'},
+        {lvl:'f-in',badge:'INFO', txt:'GreyNoise: "mass internet scanner" — no amenaza dirigida, ruido generalizado de red', src:'GreyNoise Intelligence'},
+        {lvl:'f-lo',badge:'BAJO', txt:'Sin campañas documentadas en OTX ni ThreatFox — sin asociación a actores conocidos', src:'OTX AlienVault + ThreatFox'},
+      ],
+      infra:{
+        id:[
+          {k:'ASN',        v:'AS20473 — Vultr Holdings LLC'},
+          {k:'País',       v:'NL — Netherlands'},
+          {k:'Tipo de red',v:'VPS / Cloud Hosting'},
+          {k:'Puertos',    v:'22, 80, 443, 8080'},
+        ],
+        infra:[
+          {k:'Cert TLS',    v:"Let's Encrypt — dominio autogenerado"},
+          {k:'Sistema',     v:'OpenSSH 8.9p1, nginx/1.24'},
+          {k:'Reputación',  v:'Mass-scanner (GreyNoise)'},
+          {k:'Primera vista',v:daysAgo(137)},
+        ],
+      },
+      rec:{
+        action:'👁️ MONITOREAR',color:'var(--amber)',
+        txt:'Actividad consistente con scanning automatizado desde VPS europeo. Baja probabilidad de amenaza dirigida. Revisar logs internos para conexiones activas antes de bloquear.',
+        pivot:'Rango CIDR /24, certificados TLS en el mismo ASN, historial Passive DNS.',
+      },
+    },
+    // 1: Infraestructura APT / C2 confirmado
+    {
+      d:{cls:'mal',icon:'🔴',label:'ALTO RIESGO',score:'84',unit:'RISK SCORE',
+        sub:'IP asociada a infraestructura APT activa. C2 confirmado en ThreatFox. Múltiples fuentes reportan uso en operaciones dirigidas.'},
+      mitre:[
+        {tactic:'Initial Access',   id:'T1566.001',name:'Spearphishing Attachment', desc:'Correos dirigidos con adjuntos maliciosos distribuidos desde esta infraestructura.',    url:'https://attack.mitre.org/techniques/T1566/001/'},
+        {tactic:'Lateral Movement', id:'T1021.001',name:'Remote Desktop Protocol',  desc:'RDP usado para movimiento lateral dentro de redes comprometidas.',                      url:'https://attack.mitre.org/techniques/T1021/001/'},
+        {tactic:'Credential Access',id:'T1003',    name:'OS Credential Dumping',    desc:'Extracción de credenciales NTLM/Kerberos desde sistemas comprometidos.',               url:'https://attack.mitre.org/techniques/T1003/'},
+        {tactic:'Exfiltration',     id:'T1048',    name:'Exfiltration Alt. Protocol',desc:'Datos exfiltrados via DNS tunneling y HTTPS para evadir controles DLP.',              url:'https://attack.mitre.org/techniques/T1048/'},
+      ],
+      timeline:[
+        {date:daysAgo(1), color:'red',title:'ThreatFox — C2 activo confirmado',    detail:'Familia malware confirmada, 3 hashes asociados reportados como activos',              src:'ThreatFox abuse.ch'},
+        {date:daysAgo(5), color:'red',title:'89 reportes AbuseIPDB',               detail:'Categorías: targeted-attack, port-scan, credential-brute-force',                      src:'AbuseIPDB'},
+        {date:daysAgo(14),color:'amb',title:'7 pulses OTX — actor APT sospechoso', detail:'Campaña documentada, IoCs correlacionados con grupo APT conocido',                    src:'OTX AlienVault'},
+        {date:daysAgo(30),color:'cyn',title:'Primera detección VirusTotal',        detail:'12/94 motores — múltiples vendors categorizan como C2 malicioso',                     src:'VirusTotal'},
+        {date:daysAgo(221),color:'grn',title:'IP indexada en Shodan',              detail:'Puertos 443, 4444, 8443 expuestos — certificado TLS autofirmado',                     src:'Shodan'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'mal',l:'12/94 detecciones', d:'Múltiples vendors: C2 malicioso, Trojan.Gen'},
+        {n:'AbuseIPDB',     v:'mal',l:'89 reportes',       d:'Confidence 91% — targeted-attack, credential-brute-force'},
+        {n:'Shodan',        v:'unk',l:'3 puertos abiertos',d:'443, 4444, 8443 — cert TLS autofirmado, sin banner HTTP'},
+        {n:'GreyNoise',     v:'mal',l:'C2 confirmado',     d:'Clasificado como malicious — no scanner benigno'},
+        {n:'OTX AlienVault',v:'mal',l:'7 pulses',          d:'Campaña APT documentada — actor: sospechoso estado-nación'},
+        {n:'IPinfo',        v:'unk',l:'AS24940 Hetzner',   d:'DE, Frankfurt — servidor dedicado, hosting privado'},
+        {n:'BGP Toolkit',   v:'unk',l:'Prefijo /24',       d:'Hetzner Online GmbH — AS24940'},
+        {n:'ThreatFox',     v:'mal',l:'C2 activo',         d:'Familia confirmada, 3 hashes asociados, port 4444'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'ThreatFox confirma C2 activo — familia malware con 3 hashes asociados y puerto 4444',      src:'ThreatFox abuse.ch'},
+        {lvl:'f-hi',badge:'ALTO', txt:'89 reportes AbuseIPDB Confidence 91% — categorías: targeted-attack, credential-brute-force',src:'AbuseIPDB'},
+        {lvl:'f-me',badge:'MEDIO',txt:'7 pulses OTX activos — campaña documentada, posible actor estado-nación',                   src:'OTX AlienVault'},
+        {lvl:'f-in',badge:'INFO', txt:'Servidor Hetzner DE con puertos 443/4444/8443 — patrón típico de infraestructura C2',      src:'Shodan · GreyNoise'},
+      ],
+      infra:{
+        id:[
+          {k:'ASN',        v:'AS24940 — Hetzner Online GmbH'},
+          {k:'País',       v:'DE — Germany'},
+          {k:'Tipo de red',v:'Dedicated Server'},
+          {k:'Puertos',    v:'443, 4444, 8443'},
+        ],
+        infra:[
+          {k:'Cert TLS',    v:'Autofirmado — CN=localhost'},
+          {k:'Sistema',     v:'nginx/1.18 (custom build)'},
+          {k:'Reputación',  v:'C2 confirmado (ThreatFox)'},
+          {k:'Primera vista',v:daysAgo(221)},
+        ],
+      },
+      rec:{
+        action:'🚫 BLOQUEAR',color:'var(--red)',
+        txt:'C2 activo confirmado en ThreatFox con 89 reportes en AbuseIPDB. Bloquear inmediatamente en firewall/proxy. Investigar si hay endpoints internos con conexiones activas a esta IP.',
+        pivot:'Hashes asociados en ThreatFox, rango /24 AS24940, pulses OTX de la campaña, passive DNS.',
+      },
+    },
+    // 2: Servidor phishing activo
+    {
+      d:{cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'51',unit:'RISK SCORE',
+        sub:'IP hosting páginas de phishing activas. Múltiples dominios maliciosos en el mismo servidor detectados en URLScan.'},
+      mitre:[
+        {tactic:'Initial Access',   id:'T1566.002',name:'Spearphishing Link',    desc:'URLs en correos phishing apuntan a páginas de captura de credenciales alojadas en esta IP.',  url:'https://attack.mitre.org/techniques/T1566/002/'},
+        {tactic:'Credential Access',id:'T1056.003',name:'Web Portal Capture',    desc:'Páginas falsas que imitan portales corporativos y bancarios para robo de credenciales.',       url:'https://attack.mitre.org/techniques/T1056/003/'},
+        {tactic:'Collection',       id:'T1119',    name:'Automated Collection',  desc:'Scripts automáticos que extraen y reenvían credenciales capturadas al atacante.',              url:'https://attack.mitre.org/techniques/T1119/'},
+        {tactic:'Resource Dev.',    id:'T1583.001',name:'Domains',               desc:'Múltiples dominios typosquatting registrados apuntando a esta misma IP.',                      url:'https://attack.mitre.org/techniques/T1583/001/'},
+      ],
+      timeline:[
+        {date:daysAgo(3), color:'red',title:'URLScan — 3 páginas phishing activas',  detail:'Páginas imitando portal bancario y O365 — credenciales capturadas en tiempo real',          src:'URLScan.io'},
+        {date:daysAgo(7), color:'amb',title:'URLhaus — 2 URLs activas reportadas',    detail:'Kit de phishing activo distribuyendo páginas falsas de múltiples entidades',                 src:'URLhaus abuse.ch'},
+        {date:daysAgo(12),color:'pur',title:'Pulses OTX — campaña phishing',          detail:'2 pulses documentando campaña activa de phishing masivo',                                    src:'OTX AlienVault'},
+        {date:daysAgo(21),color:'cyn',title:'Primera detección VirusTotal',           detail:'5/94 motores — vendors: phishing, malicious URL',                                            src:'VirusTotal'},
+        {date:daysAgo(28),color:'grn',title:'IP registrada — primera vista Shodan',   detail:'Puertos 80/443 expuestos — Apache/2.4, hosting reciente',                                    src:'Shodan'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'sus',l:'5/94 detecciones',  d:'Vendors: phishing, malicious-url, suspicious'},
+        {n:'AbuseIPDB',     v:'sus',l:'31 reportes',       d:'Confidence 58% — phishing, fraud'},
+        {n:'Shodan',        v:'unk',l:'2 puertos abiertos',d:'80, 443 — Apache/2.4.51, PHP/8.1'},
+        {n:'GreyNoise',     v:'unk',l:'Sin datos',         d:'No indexado como scanner — IP de propósito específico'},
+        {n:'OTX AlienVault',v:'sus',l:'2 pulses',          d:'Campaña phishing activa — múltiples dominios maliciosos'},
+        {n:'IPinfo',        v:'unk',l:'AS14061 DigitalOcean',d:'US, New York — cloud hosting, IP nueva'},
+        {n:'BGP Toolkit',   v:'unk',l:'Prefijo /20',       d:'DigitalOcean LLC — AS14061'},
+        {n:'ThreatFox',     v:'sus',l:'Phishing kit',      d:'Kit de phishing identificado, dominios asociados listados'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'URLScan confirma 3 páginas phishing activas imitando portales bancarios y O365',           src:'URLScan.io · capturas disponibles'},
+        {lvl:'f-me',badge:'MEDIO',txt:'5/94 VirusTotal + URLhaus confirman distribución activa de phishing kit',                   src:'VirusTotal + URLhaus'},
+        {lvl:'f-me',badge:'MEDIO',txt:'IP nueva (28 días) con 31 reportes AbuseIPDB — patrón típico de campaña phishing',          src:'AbuseIPDB · Confidence 58%'},
+        {lvl:'f-in',badge:'INFO', txt:'DigitalOcean US — múltiples dominios typosquatting apuntando a esta IP',                    src:'ThreatFox + Passive DNS'},
+      ],
+      infra:{
+        id:[
+          {k:'ASN',        v:'AS14061 — DigitalOcean LLC'},
+          {k:'País',       v:'US — United States'},
+          {k:'Tipo de red',v:'Cloud Hosting'},
+          {k:'Puertos',    v:'80, 443'},
+        ],
+        infra:[
+          {k:'Cert TLS',   v:"Let's Encrypt wildcard"},
+          {k:'Sistema',    v:'Apache/2.4.51, PHP/8.1'},
+          {k:'Reputación', v:'Phishing activo (URLhaus)'},
+          {k:'Primera vista',v:daysAgo(28)},
+        ],
+      },
+      rec:{
+        action:'🚫 BLOQUEAR + REPORTAR',color:'var(--red)',
+        txt:'Phishing activo confirmado con páginas imitando portales legítimos. Bloquear en proxy/firewall. Reportar dominios asociados a Google SafeBrowsing y abuse.ch.',
+        pivot:'Dominios typosquatting asociados (Passive DNS), phishing kit en ThreatFox, OTX pulse completo.',
+      },
+    },
+  ];
 
-// Recommendation per type
-const REC_DATA = {
-  ip:{
-    action:'👁️ MONITOREAR',
-    color:'var(--amber)',
-    txt:'Actividad consistente con scanning automatizado desde VPS europeo. Baja probabilidad de amenaza dirigida. Revisar si hay conexiones activas en logs internos antes de bloquear.',
-    pivot:'Rango CIDR /24, certificados TLS en el mismo ASN, historial Passive DNS.',
-  },
-  domain:{
-    action:'🔍 INVESTIGAR MÁS',
-    color:'var(--purple)',
-    txt:'Dominio con contenido de seguridad ofensiva legítima, pero referenciado en webshells activos. No bloquear sin validar uso interno — investigar si hay usuarios o endpoints accediendo.',
-    pivot:'Subdomínios, IPs históricas (Passive DNS), archivos descargados desde el dominio.',
-  },
-  hash:{
-    action:'🚫 BLOQUEAR',
-    color:'var(--red)',
-    txt:'Malware confirmado familia Mirai con 38/61 detecciones. Bloquear en EDR/endpoint inmediatamente. Investigar origen (vector de entrada) y alcance lateral.',
-    pivot:'IP C2 185.220.x.x, rango /24, otros hashes del mismo pulse OTX, persistencia en Run Keys.',
-  },
-};
+  // ── DOMAIN SCENARIOS ────────────────────────────────
+  const domain = [
+    // 0: Herramienta de seguridad / investigación ofensiva
+    {
+      d:{cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'45',unit:'RISK SCORE',
+        sub:'Dominio con contenido de seguridad ofensiva legítima. Referenciado en herramientas y webshells activos.'},
+      mitre:[
+        {tactic:'Command & Control',id:'T1568',name:'Dynamic Resolution',             desc:'Uso de dominios para mantener comunicación C2 con rotación dinámica.',          url:'https://attack.mitre.org/techniques/T1568/'},
+        {tactic:'Initial Access',   id:'T1566',name:'Phishing',                       desc:'Dominio referenciado en campañas de phishing para captura de credenciales.',    url:'https://attack.mitre.org/techniques/T1566/'},
+        {tactic:'Execution',        id:'T1059',name:'Command & Scripting Interpreter', desc:'Scripts de PowerShell/bash descargados desde este dominio en análisis sandbox.', url:'https://attack.mitre.org/techniques/T1059/'},
+        {tactic:'Resource Dev.',    id:'T1583',name:'Acquire Infrastructure',          desc:'Infraestructura con antigüedad usada como fuente legítima para herramientas.',   url:'https://attack.mitre.org/techniques/T1583/'},
+      ],
+      timeline:[
+        {date:daysAgo(1), color:'amb',title:'Análisis actual',                   detail:'1/94 detecciones en VirusTotal — Seclookup: Malicious',                             src:'VirusTotal'},
+        {date:daysAgo(18),color:'red',title:'Referenciado en webshell activo',   detail:'Archivo c37.php (33/62 detecciones) descarga payloads desde este dominio',          src:'VirusTotal Files'},
+        {date:daysAgo(99),color:'pur',title:'Aparece en herramienta ofensiva',   detail:'gef.py y LazyOwn referencian el dominio como fuente de exploits',                   src:'Hybrid Analysis'},
+        {date:daysAgo(512),color:'cyn',title:'Indexado en motores de búsqueda',  detail:'Rank alto en Cisco Umbrella — tráfico legítimo consistente',                        src:'Cisco Umbrella'},
+        {date:daysAgo(5523),color:'grn',title:'Registro del dominio',            detail:'Dominio antiguo registrado hace más de 15 años — alta antigüedad',                  src:'WHOIS'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'sus',l:'1/94 detecciones',  d:'Seclookup: Malicious — resto limpios'},
+        {n:'URLScan.io',    v:'cln',l:'12 escaneos',       d:'Último escaneo reciente, sin recursos externos sospechosos'},
+        {n:'OTX AlienVault',v:'cln',l:'Sin pulses',        d:'No asociado a campañas documentadas activas'},
+        {n:'Shodan',        v:'unk',l:'Puertos 80/443',    d:"Linode, nginx, certificado Let's Encrypt válido"},
+        {n:'Pulsedive',     v:'sus',l:'Risk: medium',      d:'Referenciado en 2 feeds de seguridad ofensiva'},
+        {n:'ThreatFox',     v:'cln',l:'Sin registros',     d:'No aparece en feeds activos de malware'},
+        {n:'URLhaus',       v:'cln',l:'Sin registros',     d:'No distribuye malware directamente'},
+        {n:'IBM X-Force',   v:'cln',l:'Score: 1/10',       d:'Categoría: Security Research'},
+        {n:'Palo Alto WF',  v:'unk',l:'Búsqueda manual',  d:'Ingresar IOC en el sitio — Category + Risk Level (Low/Medium/High-Risk)'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'Referenciado en webshell activo c37.php (33/62 VT) como servidor de payloads',             src:'VirusTotal Files'},
+        {lvl:'f-me',badge:'MEDIO',txt:'1/94 motores VirusTotal — Seclookup categoriza como Malicious',                            src:'VirusTotal · análisis reciente'},
+        {lvl:'f-me',badge:'MEDIO',txt:'Pulsedive risk: medium — aparece en 2 feeds de seguridad ofensiva activos',                src:'Pulsedive'},
+        {lvl:'f-in',badge:'INFO', txt:'URLScan.io: sin recursos externos sospechosos en 12 escaneos — contenido legítimo',        src:'URLScan.io'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo',      v:'Dominio'},
+          {k:'Registrar', v:'Name106, Inc.'},
+          {k:'Registrado',v:daysAgo(5523)},
+          {k:'Antigüedad',v:'15+ años'},
+        ],
+        infra:[
+          {k:'IP actual',  v:'45.33.32.156 (Linode)'},
+          {k:'Cert TLS',   v:"Let's Encrypt, válido"},
+          {k:'Rango CIDR', v:'45.33.32.0/24'},
+          {k:'Categoría',  v:'Security Research'},
+        ],
+      },
+      rec:{
+        action:'🔍 INVESTIGAR MÁS',color:'var(--purple)',
+        txt:'Dominio con contenido de seguridad ofensiva legítima, pero referenciado en webshells activos. No bloquear sin validar uso interno. Investigar si hay endpoints accediendo.',
+        pivot:'Subdominios activos, IPs históricas (Passive DNS), archivos descargados desde el dominio.',
+      },
+    },
+    // 1: Phishing / captura de credenciales
+    {
+      d:{cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'73',unit:'RISK SCORE',
+        sub:'Dominio activo en campaña de phishing. Página falsa imitando portal corporativo detectada en URLScan.'},
+      mitre:[
+        {tactic:'Initial Access',   id:'T1566',    name:'Phishing',             desc:'Dominio usado como landing page en campañas de phishing distribuidas por email.',    url:'https://attack.mitre.org/techniques/T1566/'},
+        {tactic:'Credential Access',id:'T1056.003',name:'Web Portal Capture',   desc:'Página que imita portal legítimo para captura de credenciales corporativas.',       url:'https://attack.mitre.org/techniques/T1056/003/'},
+        {tactic:'Execution',        id:'T1204.001',name:'Malicious Link',        desc:'Usuario ejecuta la amenaza al hacer clic en el enlace del correo phishing.',        url:'https://attack.mitre.org/techniques/T1204/001/'},
+        {tactic:'Resource Dev.',    id:'T1583.001',name:'Domains',               desc:'Dominio typosquatting registrado recientemente para esta campaña específica.',       url:'https://attack.mitre.org/techniques/T1583/001/'},
+      ],
+      timeline:[
+        {date:daysAgo(1), color:'red',title:'URLScan — página phishing activa detectada', detail:'Captura de pantalla disponible — imita portal bancario/O365',                    src:'URLScan.io'},
+        {date:daysAgo(5), color:'red',title:'ThreatFox — campaña phishing confirmada',    detail:'Kit de phishing identificado, credenciales capturadas en tiempo real',           src:'ThreatFox abuse.ch'},
+        {date:daysAgo(11),color:'amb',title:'3 pulses OTX — campaña phishing',            detail:'Pulses documentando campaña activa con múltiples dominios',                      src:'OTX AlienVault'},
+        {date:daysAgo(15),color:'cyn',title:'Primera detección VirusTotal',               detail:'8/94 motores — vendors: phishing, malicious-url',                               src:'VirusTotal'},
+        {date:daysAgo(18),color:'grn',title:'Dominio registrado',                         detail:'NameCheap — dominio nuevo, patrón typosquatting de marca conocida',              src:'WHOIS'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'sus',l:'8/94 detecciones',   d:'Vendors: phishing, malicious-url, suspicious-content'},
+        {n:'URLScan.io',    v:'mal',l:'Phishing confirmado',d:'Captura disponible — página imita portal legítimo'},
+        {n:'OTX AlienVault',v:'sus',l:'3 pulses',           d:'Campaña phishing activa — múltiples dominios relacionados'},
+        {n:'Shodan',        v:'unk',l:'Puertos 80/443',     d:'Cloudflare proxy — IP real del servidor oculta'},
+        {n:'Pulsedive',     v:'sus',l:'Risk: high',         d:'Referenciado en múltiples feeds de phishing activos'},
+        {n:'ThreatFox',     v:'sus',l:'Phishing activo',    d:'Kit de phishing identificado — credenciales capturadas activas'},
+        {n:'URLhaus',       v:'sus',l:'1 URL activa',       d:'URL de phishing reportada y confirmada'},
+        {n:'IBM X-Force',   v:'sus',l:'Score: 7/10',        d:'Categoría: Phishing — alto riesgo'},
+        {n:'Palo Alto WF',  v:'unk',l:'Búsqueda manual',   d:'Ingresar IOC en el sitio — Category + Risk Level (Low/Medium/High-Risk)'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'URLScan confirma página phishing activa con captura — imita portal bancario/O365',          src:'URLScan.io · captura disponible'},
+        {lvl:'f-hi',badge:'ALTO', txt:'8/94 VirusTotal + ThreatFox confirman campaña phishing activa en curso',                    src:'VirusTotal + ThreatFox'},
+        {lvl:'f-me',badge:'MEDIO',txt:'Dominio registrado hace 18 días — patrón typosquatting, edad consistente con campaña',      src:'WHOIS · NameCheap'},
+        {lvl:'f-in',badge:'INFO', txt:'Cloudflare proxy activo — oculta IP real del servidor de phishing',                        src:'Shodan · URLScan.io'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo',      v:'Dominio phishing'},
+          {k:'Registrar', v:'NameCheap (privacidad activa)'},
+          {k:'Registrado',v:daysAgo(18)},
+          {k:'Antigüedad',v:'18 días — dominio nuevo'},
+        ],
+        infra:[
+          {k:'IP actual',  v:'Cloudflare proxy (IP oculta)'},
+          {k:'Cert TLS',   v:"Let's Encrypt reciente"},
+          {k:'Categoría',  v:'Phishing confirmado'},
+          {k:'Kit',        v:'Phishing-kit v2 (ThreatFox)'},
+        ],
+      },
+      rec:{
+        action:'🚫 BLOQUEAR + REPORTAR',color:'var(--red)',
+        txt:'Phishing activo confirmado imitando portal legítimo. Bloquear en proxy/firewall y reportar a Google SafeBrowsing. Notificar a la entidad imitada para takedown.',
+        pivot:'Dominios typosquatting relacionados (Passive DNS), otros dominios del mismo registrar/IP, pulses OTX de la campaña.',
+      },
+    },
+    // 2: C2 activo de malware
+    {
+      d:{cls:'mal',icon:'🔴',label:'MALICIOSO',score:'88',unit:'RISK SCORE',
+        sub:'Dominio confirmado como servidor de Comando y Control activo. Múltiples familias de malware lo referencian en análisis sandbox.'},
+      mitre:[
+        {tactic:'Command & Control',id:'T1568',    name:'Dynamic Resolution',             desc:'Dominio C2 con resolución dinámica para evadir bloqueos por IP.',              url:'https://attack.mitre.org/techniques/T1568/'},
+        {tactic:'Persistence',      id:'T1547',    name:'Boot or Logon Autostart',        desc:'Malware instala persistencia en inicio del sistema para contactar este C2.',    url:'https://attack.mitre.org/techniques/T1547/'},
+        {tactic:'Execution',        id:'T1059',    name:'Command & Scripting Interpreter', desc:'El C2 entrega scripts de PowerShell/bash a los implantes comprometidos.',       url:'https://attack.mitre.org/techniques/T1059/'},
+        {tactic:'Defense Evasion',  id:'T1027',    name:'Obfuscated Files',               desc:'Tráfico C2 ofuscado usando TLS con certificados aparentemente legítimos.',       url:'https://attack.mitre.org/techniques/T1027/'},
+      ],
+      timeline:[
+        {date:daysAgo(2), color:'red',title:'ThreatFox — C2 activo confirmado',         detail:'Familia RAT/Stealer, 5 IPs C2 asociadas, familia malware activa',              src:'ThreatFox abuse.ch'},
+        {date:daysAgo(8), color:'red',title:'5 pulses OTX — actor documentado',          detail:'Actor con TTPs conocidos, campaña en curso contra sector financiero',           src:'OTX AlienVault'},
+        {date:daysAgo(15),color:'amb',title:'Hybrid Analysis — sandbox confirma C2',     detail:'Muestra contacta este dominio, descarga payload secundario cifrado',            src:'Hybrid Analysis'},
+        {date:daysAgo(30),color:'cyn',title:'Primera vista — URLScan tráfico sospechoso',detail:'Tráfico POST con payloads cifrados, patrón C2 beacon',                         src:'URLScan.io'},
+        {date:daysAgo(45),color:'grn',title:'Dominio registrado',                        detail:'Registrado con datos privados — inicio de infraestructura de campaña',         src:'WHOIS'},
+      ],
+      srcData:[
+        {n:'VirusTotal',    v:'mal',l:'11/94 detecciones', d:'Vendors: C2-malware, Trojan, malicious-url'},
+        {n:'URLScan.io',    v:'mal',l:'C2 confirmado',     d:'Tráfico POST periódico — patrón beacon C2'},
+        {n:'OTX AlienVault',v:'mal',l:'5 pulses',          d:'Actor documentado — campaña sector financiero'},
+        {n:'Shodan',        v:'unk',l:'Puerto 443/8443',   d:'VPS Hetzner, nginx custom, cert TLS autofirmado'},
+        {n:'Pulsedive',     v:'mal',l:'Risk: critical',    d:'Crítico — C2 activo, múltiples feeds de malware'},
+        {n:'ThreatFox',     v:'mal',l:'C2 activo',         d:'Familia malware activa, 5 IPs C2 asociadas'},
+        {n:'URLhaus',       v:'mal',l:'Múltiples URLs',    d:'Distribución de payloads maliciosos activa'},
+        {n:'IBM X-Force',   v:'mal',l:'Score: 9/10',       d:'Categoría: Malware C2 — bloquear recomendado'},
+        {n:'Palo Alto WF',  v:'unk',l:'Búsqueda manual',  d:'Ingresar IOC en el sitio — Category + Risk Level (Low/Medium/High-Risk)'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'ThreatFox confirma C2 activo — familia malware con 5 IPs C2 asociadas activas',           src:'ThreatFox abuse.ch'},
+        {lvl:'f-hi',badge:'ALTO', txt:'11/94 VirusTotal + sandbox confirman C2 — payload secundario descargado en análisis',      src:'VirusTotal + Hybrid Analysis'},
+        {lvl:'f-me',badge:'MEDIO',txt:'5 pulses OTX — actor documentado con campaña activa contra sector financiero',             src:'OTX AlienVault'},
+        {lvl:'f-in',badge:'INFO', txt:'Dominio registrado hace 45 días — infraestructura reciente, patrón campaña dirigida',     src:'WHOIS + Passive DNS'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo',      v:'Dominio C2 malware'},
+          {k:'Registrar', v:'Namecheap (datos privados)'},
+          {k:'Registrado',v:daysAgo(45)},
+          {k:'Antigüedad',v:'45 días — dominio nuevo'},
+        ],
+        infra:[
+          {k:'IP actual',  v:'Hetzner VPS (DE)'},
+          {k:'Cert TLS',   v:'Autofirmado / wildcard'},
+          {k:'Categoría',  v:'Malware C2 (ThreatFox)'},
+          {k:'Familia',    v:'RAT / Stealer confirmado'},
+        ],
+      },
+      rec:{
+        action:'🚫 BLOQUEAR INMEDIATAMENTE',color:'var(--red)',
+        txt:'C2 activo confirmado en múltiples fuentes. Bloquear en DNS/proxy/firewall inmediatamente. Investigar endpoints internos con conexiones a este dominio — posible compromiso activo.',
+        pivot:'IPs C2 asociadas (ThreatFox), hashes de malware relacionados, subdominios (Passive DNS), pulses OTX completos.',
+      },
+    },
+  ];
+
+  // ── HASH SCENARIOS ───────────────────────────────────
+  const hash = [
+    // 0: Botnet / malware Linux (Mirai)
+    {
+      d:{cls:'mal',icon:'🔴',label:'MALICIOSO',score:'38/61',unit:'DETECCIONES',
+        sub:'Malware confirmado familia Mirai/botnet. Infecta dispositivos IoT y Linux para ataques DDoS masivos.'},
+      mitre:[
+        {tactic:'Execution',   id:'T1059.003',name:'Windows Command Shell',  desc:'Ejecuta comandos via shell para persistencia y movimiento lateral.',      url:'https://attack.mitre.org/techniques/T1059/003/'},
+        {tactic:'Persistence', id:'T1547.001',name:'Registry Run Keys',      desc:'Modifica claves de registro para ejecución automática al inicio.',        url:'https://attack.mitre.org/techniques/T1547/001/'},
+        {tactic:'Defense Evasion',id:'T1027', name:'Obfuscated Files',       desc:'Código obfuscado para evadir detección por análisis estático.',            url:'https://attack.mitre.org/techniques/T1027/'},
+        {tactic:'Exfiltration',id:'T1041',    name:'Exfiltration Over C2',   desc:'Datos exfiltrados por el mismo canal C2 cifrado.',                        url:'https://attack.mitre.org/techniques/T1041/'},
+      ],
+      timeline:[
+        {date:daysAgo(4), color:'red',title:'Detección activa confirmada',         detail:'38/61 motores — familia: Mirai.botnet, variante BASHLITE',                  src:'VirusTotal'},
+        {date:daysAgo(9), color:'red',title:'Sandbox dinámico — Hybrid Analysis',  detail:'Verdict: Malicious. Crea proceso hijo, modifica registro, contacta C2',     src:'Hybrid Analysis'},
+        {date:daysAgo(11),color:'amb',title:'Subido a MalwareBazaar',              detail:'Tags: botnet, mirai, arm — feed automatizado abuse.ch',                     src:'MalwareBazaar'},
+        {date:daysAgo(12),color:'pur',title:'Asociado a pulse OTX',                detail:'Pulse: "Mirai Q1 2026 wave" — 47 IOCs relacionados',                        src:'OTX AlienVault'},
+        {date:daysAgo(13),color:'cyn',title:'Primera vista reportada',             detail:'ANY.RUN: ejecuta /bin/sh, intenta conexión a 23 IPs en 5 minutos',          src:'ANY.RUN'},
+      ],
+      srcData:[
+        {n:'VirusTotal',     v:'mal',l:'38/61 detecciones', d:'Familia: Mirai.botnet — BASHLITE variant'},
+        {n:'Hybrid Analysis',v:'mal',l:'Malicious',         d:'Crea proceso hijo, modifica registro Run Keys, beacon C2'},
+        {n:'MalwareBazaar',  v:'mal',l:'Confirmado',        d:'Tags: botnet, mirai, arm — origen: abuse.ch feed'},
+        {n:'OTX AlienVault', v:'mal',l:'2 pulses',          d:'Pulse: Mirai Q1 2026 — 47 IOCs relacionados'},
+        {n:'ThreatFox',      v:'mal',l:'C2 confirmado',     d:'C2: IP:4444 — familia: Mirai'},
+        {n:'ANY.RUN',        v:'mal',l:'Score: 100',        d:'Ejecuta /bin/sh, conecta a 23 IPs en 5 min'},
+        {n:'Triage',         v:'mal',l:'Malicious',         d:'Score 10/10, detecta evasión de sandbox'},
+        {n:'IntezerAnalyze', v:'mal',l:'Mirai lineage',     d:'80% similaridad genómica con Mirai.B'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'38/61 motores VirusTotal confirman familia Mirai.botnet — variante BASHLITE activa',       src:'VirusTotal · 38/61 detecciones'},
+        {lvl:'f-hi',badge:'ALTO', txt:'Sandbox: crea proceso hijo, modifica Run Keys, contacta C2 externo en análisis dinámico',  src:'Hybrid Analysis · Verdict: Malicious'},
+        {lvl:'f-me',badge:'MEDIO',txt:'MalwareBazaar abuse.ch — tags: botnet, mirai, arm. Feed automatizado',                    src:'MalwareBazaar'},
+        {lvl:'f-in',badge:'INFO', txt:'Pulse OTX "Mirai Q1 2026" — 47 IOCs relacionados en la misma campaña de botnet',          src:'OTX AlienVault'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo archivo', v:'ELF 32-bit ARM'},
+          {k:'Tamaño',       v:'87,552 bytes'},
+          {k:'Familia',      v:'Mirai.botnet / BASHLITE'},
+          {k:'Primera vista',v:daysAgo(13)},
+        ],
+        infra:[
+          {k:'Empaquetado',  v:'No (sin packer)'},
+          {k:'C2 observado', v:'IP:4444 (ThreatFox)'},
+          {k:'Sandbox score',v:'10/10 (Triage)'},
+          {k:'Evasión',      v:'Anti-sandbox detectado'},
+        ],
+      },
+      rec:{
+        action:'🚫 BLOQUEAR',color:'var(--red)',
+        txt:'Malware Mirai confirmado con 38/61 detecciones. Bloquear en EDR/endpoint inmediatamente. Investigar origen (vector de entrada), dispositivos IoT en red y alcance lateral.',
+        pivot:'IP C2 (ThreatFox), hashes del mismo pulse OTX, rango /24 del C2, dispositivos IoT en la red interna.',
+      },
+    },
+    // 1: Ransomware
+    {
+      d:{cls:'mal',icon:'🔴',label:'MALICIOSO',score:'55/68',unit:'DETECCIONES',
+        sub:'Ransomware confirmado familia LockBit/Akira. Cifra archivos con AES-256, elimina shadow copies y exfiltra datos antes del cifrado.'},
+      mitre:[
+        {tactic:'Impact',        id:'T1486',    name:'Data Encrypted for Impact',   desc:'Cifra archivos con AES-256 + RSA-2048. Extensión personalizada añadida a archivos cifrados.', url:'https://attack.mitre.org/techniques/T1486/'},
+        {tactic:'Defense Evasion',id:'T1562.001',name:'Disable Security Tools',     desc:'Termina procesos de AV/EDR y deshabilita servicios de backup antes de cifrar.',              url:'https://attack.mitre.org/techniques/T1562/001/'},
+        {tactic:'Lateral Movement',id:'T1021.002',name:'SMB/Windows Admin Shares',  desc:'Se propaga via SMB usando credenciales robadas y shares administrativos (ADMIN$).',          url:'https://attack.mitre.org/techniques/T1021/002/'},
+        {tactic:'Exfiltration',   id:'T1567',   name:'Exfiltration to Cloud Storage',desc:'Exfiltra datos previo al cifrado — doble extorsión via leak site en Tor.',                   url:'https://attack.mitre.org/techniques/T1567/'},
+      ],
+      timeline:[
+        {date:daysAgo(3), color:'red',title:'VT — 55/68 detecciones, familia confirmada', detail:'Familia: LockBit/Akira variant — múltiples vendors confirman ransomware',          src:'VirusTotal'},
+        {date:daysAgo(5), color:'red',title:'ANY.RUN — exfiltra datos antes de cifrar',   detail:'Sandbox: elimina shadow copies, exfiltra ~2.3GB, luego cifra archivos',             src:'ANY.RUN'},
+        {date:daysAgo(6), color:'amb',title:'MalwareBazaar — publicado en abuse.ch',       detail:'Tags: ransomware, lockbit, windows — origen: feed automatizado',                   src:'MalwareBazaar'},
+        {date:daysAgo(7), color:'pur',title:'4 pulses OTX — campaña ransomware activa',    detail:'Campaña documentada contra sector salud y manufactura',                            src:'OTX AlienVault'},
+        {date:daysAgo(8), color:'cyn',title:'Primera vista — Triage score 10/10',          detail:'Análisis inicial confirma ransomware con evasión de sandbox detectada',            src:'Triage'},
+      ],
+      srcData:[
+        {n:'VirusTotal',     v:'mal',l:'55/68 detecciones', d:'Familia: LockBit/Akira variant — alta prevalencia'},
+        {n:'Hybrid Analysis',v:'mal',l:'Malicious',         d:'Deshabilita AV, elimina shadow copies, cifra con AES-256'},
+        {n:'MalwareBazaar',  v:'mal',l:'Confirmado',        d:'Tags: ransomware, lockbit, windows — abuse.ch'},
+        {n:'OTX AlienVault', v:'mal',l:'4 pulses',          d:'Campaña ransomware activa — sector salud y manufactura'},
+        {n:'ThreatFox',      v:'mal',l:'Ransomware C2',     d:'C2 en Tor hidden service — grupo RaaS documentado'},
+        {n:'ANY.RUN',        v:'mal',l:'Score: 100',        d:'Exfiltra 2.3GB, elimina shadow copies, cifra todos los archivos'},
+        {n:'Triage',         v:'mal',l:'Score: 10/10',      d:'Ransomware confirmado con evasión de sandbox activa'},
+        {n:'IntezerAnalyze', v:'mal',l:'LockBit lineage',   d:'75% similaridad genómica con LockBit 3.0'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'55/68 motores VirusTotal — familia ransomware LockBit/Akira con alta prevalencia',         src:'VirusTotal · 55/68 detecciones'},
+        {lvl:'f-hi',badge:'ALTO', txt:'Sandbox ANY.RUN: exfiltra 2.3GB datos, elimina shadow copies, luego cifra — doble extorsión',src:'ANY.RUN · Hybrid Analysis'},
+        {lvl:'f-me',badge:'MEDIO',txt:'4 pulses OTX — campaña activa contra sector salud y manufactura documentada',              src:'OTX AlienVault'},
+        {lvl:'f-in',badge:'INFO', txt:'Grupo RaaS con leak site en Tor — datos de víctimas publicados si no pagan rescate',       src:'ThreatFox + inteligencia de amenazas'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo archivo', v:'PE32 Windows Executable'},
+          {k:'Tamaño',       v:'245,760 bytes'},
+          {k:'Familia',      v:'LockBit / Akira variant'},
+          {k:'Primera vista',v:daysAgo(8)},
+        ],
+        infra:[
+          {k:'Empaquetado',  v:'UPX packed'},
+          {k:'C2 observado', v:'Tor hidden service'},
+          {k:'Sandbox score',v:'10/10 (Triage + ANY.RUN)'},
+          {k:'Persistencia', v:'RunOnce Registry Key'},
+        ],
+      },
+      rec:{
+        action:'🚫 CONTENER + IR INMEDIATO',color:'var(--red)',
+        txt:'Ransomware activo con doble extorsión. AISLAR endpoint inmediatamente. Activar plan de respuesta a incidentes. NO reiniciar el equipo. Preservar evidencia forense antes de remediar.',
+        pivot:'Hashes relacionados en pulse OTX, C2 Tor (ThreatFox), otros endpoints con el mismo hash, vector de entrada inicial.',
+      },
+    },
+    // 2: RAT / Stealer
+    {
+      d:{cls:'mal',icon:'🔴',label:'MALICIOSO',score:'29/70',unit:'DETECCIONES',
+        sub:'Remote Access Trojan / Stealer confirmado. Extrae credenciales de browsers, capturas de pantalla y datos bancarios de forma activa.'},
+      mitre:[
+        {tactic:'Collection',      id:'T1113',    name:'Screen Capture',                desc:'Toma capturas de pantalla cada 30s y las envía al C2 del atacante.',              url:'https://attack.mitre.org/techniques/T1113/'},
+        {tactic:'Credential Access',id:'T1555',   name:'Credentials from Password Stores',desc:'Extrae credenciales guardadas de Chrome, Firefox, Edge y gestores de contraseñas.',url:'https://attack.mitre.org/techniques/T1555/'},
+        {tactic:'Command & Control',id:'T1071.001',name:'Web Protocols',                 desc:'Comunicación C2 encubierta via HTTP/S usando dominio legítimo comprometido.',     url:'https://attack.mitre.org/techniques/T1071/001/'},
+        {tactic:'Exfiltration',    id:'T1041',    name:'Exfiltration Over C2 Channel',  desc:'Envía credenciales, capturas y datos bancarios por el canal C2 cifrado.',         url:'https://attack.mitre.org/techniques/T1041/'},
+      ],
+      timeline:[
+        {date:daysAgo(5), color:'red',title:'VT — 29/70 detecciones, stealer confirmado',  detail:'Familia: RedLine/Raccoon Stealer — extrae creds de 40+ aplicaciones',           src:'VirusTotal'},
+        {date:daysAgo(9), color:'red',title:'ANY.RUN — exfiltración de credenciales activa',detail:'Screenshots c/30s, accede a keychain, contacta C2, exfiltra creds en vivo',    src:'ANY.RUN'},
+        {date:daysAgo(11),color:'amb',title:'MalwareBazaar — publicado abuse.ch',           detail:'Tags: stealer, redline, infostealer — feed automatizado',                      src:'MalwareBazaar'},
+        {date:daysAgo(13),color:'pur',title:'2 pulses OTX — campaña stealer activa',        detail:'Campaña MaaS (Malware-as-a-Service) documentada 2026',                         src:'OTX AlienVault'},
+        {date:daysAgo(15),color:'cyn',title:'Primera vista — Hybrid Analysis',              detail:'Análisis inicial: accede a %APPDATA%, contacta C2, establece persistencia',    src:'Hybrid Analysis'},
+      ],
+      srcData:[
+        {n:'VirusTotal',     v:'mal',l:'29/70 detecciones', d:'Familia: RedLine/Raccoon Stealer — infostealer activo'},
+        {n:'Hybrid Analysis',v:'mal',l:'Malicious',         d:'Accede a %APPDATA%, contacta C2, establece persistencia via Task Scheduler'},
+        {n:'MalwareBazaar',  v:'mal',l:'Confirmado',        d:'Tags: stealer, redline, infostealer — abuse.ch'},
+        {n:'OTX AlienVault', v:'mal',l:'2 pulses',          d:'Campaña MaaS 2026 — stealer vendido en foros'},
+        {n:'ThreatFox',      v:'mal',l:'C2 stealer',        d:'C2 via dominio comprometido — exfiltración activa'},
+        {n:'ANY.RUN',        v:'mal',l:'Score: 92',         d:'Screenshots c/30s, extrae credenciales de 40+ apps, C2 activo'},
+        {n:'Triage',         v:'mal',l:'Score: 8/10',       d:'Infostealer confirmado — acceso a keychain y cookies'},
+        {n:'IntezerAnalyze', v:'mal',l:'RedLine lineage',   d:'85% similaridad genómica con RedLine Stealer'},
+      ],
+      findings:[
+        {lvl:'f-hi',badge:'ALTO', txt:'29/70 VirusTotal confirman stealer — extrae credenciales de 40+ aplicaciones activamente',  src:'VirusTotal · 29/70 detecciones'},
+        {lvl:'f-hi',badge:'ALTO', txt:'ANY.RUN: toma screenshots c/30s, accede al keychain, exfiltra credenciales en tiempo real', src:'ANY.RUN · análisis dinámico'},
+        {lvl:'f-me',badge:'MEDIO',txt:'2 pulses OTX — campaña MaaS activa, stealer vendido en foros underground 2026',            src:'OTX AlienVault'},
+        {lvl:'f-in',badge:'INFO', txt:'RedLine/Raccoon familia — MaaS frecuentemente ofrecido en foros, alta distribución',       src:'IntezerAnalyze + ThreatFox'},
+      ],
+      infra:{
+        id:[
+          {k:'Tipo archivo', v:'PE64 .NET compiled'},
+          {k:'Tamaño',       v:'182,400 bytes'},
+          {k:'Familia',      v:'RedLine / Raccoon Stealer'},
+          {k:'Primera vista',v:daysAgo(15)},
+        ],
+        infra:[
+          {k:'Empaquetado',  v:'.NET obfuscado (ConfuserEx)'},
+          {k:'C2 observado', v:'Dominio comprometido / Tor'},
+          {k:'Sandbox score',v:'9/10 (ANY.RUN)'},
+          {k:'Persistencia', v:'Task Scheduler + RunOnce'},
+        ],
+      },
+      rec:{
+        action:'🚫 CONTENER + CAMBIAR CREDENCIALES',color:'var(--red)',
+        txt:'Stealer activo confirmado. Asumir credenciales comprometidas. Aislar endpoint, cambiar TODAS las contraseñas desde dispositivo limpio. Revocar tokens de sesión y cookies activos.',
+        pivot:'C2 domain (ThreatFox), hashes relacionados en pulses OTX, otros endpoints con el mismo hash, logs de red para conexiones al C2.',
+      },
+    },
+  ];
+
+  const pools = {ip, domain, hash};
+  return pools[type][idx];
+}
 
 // ── localStorage history (renamed from 'history' to avoid shadowing window.history) ──
 const HIST_KEY = 'ioc-analyzer-history';
@@ -1245,12 +1588,8 @@ async function go(){
   await new Promise(r=>setTimeout(r,420));
   prog.classList.remove('on');
 
-  const demos = {
-    ip:     {cls:'sus',icon:'⚠',label:'SOSPECHOSO',score:'62',unit:'RISK SCORE', sub:'IP activa en scanning masivo desde VPS europeo. No confirmada como amenaza dirigida.'},
-    domain: {cls:'sus',icon:'⚠',label:'SOSPECHOSO', score:'45',unit:'RISK SCORE', sub:'Dominio con contenido de seguridad ofensiva. Referenciado en herramientas de ataque.'},
-    hash:   {cls:'mal',icon:'🔴',label:'MALICIOSO',  score:'38/61',unit:'DETECCIONES', sub:'Detectado como backdoor/troyano. Familia confirmada: Mirai botnet.'},
-  };
-  const d = demos[type];
+  const scenario = getScenario(val, type);
+  const d = scenario.d;
   const cliente = document.getElementById('clienteIn').value.trim();
   const req     = document.getElementById('reqIn').value.trim();
 
@@ -1281,17 +1620,19 @@ function renderReport(ioc, type, d, cliente, req){
   const sec = document.getElementById('results');
   sec.classList.add('on');
   const today = new Date().toISOString().split('T')[0];
-  const typeLabel={ip:'Dirección IPv4',domain:'Dominio',hash:'Hash SHA256'}[type];
+  const hashTypeLabel = ioc.length===32?'Hash MD5':ioc.length===40?'Hash SHA1':'Hash SHA256';
+  const typeLabel={ip:'Dirección IPv4',domain:'Dominio',hash:hashTypeLabel}[type]||'IOC';
   const histIdx = iocHistory.length - 1; // just added
   const tags = [{k:'pen',l:'PENDIENTE'},{k:'mon',l:'MONITOREANDO'},{k:'blq',l:'BLOQUEADO'},{k:'fp',l:'FALSO POSITIVO'}];
   const iocDefanged = defang(ioc);
 
-  const srcData   = SRC_DATA[type];
-  const findings  = FINDINGS_DATA[type];
-  const mitre     = MITRE_DEMO[type];
-  const timeline  = TIMELINE_DEMO[type];
-  const infra     = INFRA_DATA[type];
-  const rec       = REC_DATA[type];
+  const sc        = getScenario(ioc, type);
+  const srcData   = sc.srcData;
+  const findings  = sc.findings;
+  const mitre     = sc.mitre;
+  const timeline  = sc.timeline;
+  const infra     = sc.infra;
+  const rec       = sc.rec;
 
   const badgeMap  = {mal:'Malicioso',sus:'Sospechoso',cln:'Limpio',unk:'Sin datos'};
 
@@ -1475,18 +1816,14 @@ function exportHistoryCSV(){
 
 function exportReport(ioc, type, cliente, req){
   const today = new Date().toISOString().split('T')[0];
-  const srcData  = SRC_DATA[type];
-  const findings = FINDINGS_DATA[type];
-  const mitre    = MITRE_DEMO[type];
-  const timeline = TIMELINE_DEMO[type];
-  const infra    = INFRA_DATA[type];
-  const rec      = REC_DATA[type];
-  const demos    = {
-    ip:     {label:'SOSPECHOSO',score:'62',unit:'RISK SCORE'},
-    domain: {label:'SOSPECHOSO',score:'45',unit:'RISK SCORE'},
-    hash:   {label:'MALICIOSO', score:'38/61',unit:'DETECCIONES'},
-  };
-  const d = demos[type];
+  const sc       = getScenario(ioc, type);
+  const srcData  = sc.srcData;
+  const findings = sc.findings;
+  const mitre    = sc.mitre;
+  const timeline = sc.timeline;
+  const infra    = sc.infra;
+  const rec      = sc.rec;
+  const d        = sc.d;
 
   const lastEntry = iocHistory[iocHistory.length-1];
   const cli = lastEntry?.cliente||'';
