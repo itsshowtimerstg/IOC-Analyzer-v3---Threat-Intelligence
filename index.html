@@ -1333,7 +1333,7 @@ function switchTab(el, id){
 // ═══════════════════════════════════════════════════
 function detectType(v){
   if(!v) return null;
-  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) return 'ip';
+  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(v) && v.split('.').every(p=>+p<=255)) return 'ip';
   // IPv6 — must come before domain check
   if(/^[a-f0-9:]+:[a-f0-9:]+$/i.test(v) && v.includes(':')) return 'ipv6';
   if(/^[a-f0-9]{32}$/i.test(v)) return 'md5';
@@ -1387,7 +1387,7 @@ function renderSrcGrid(activeType){
 function renderRefTab(){
   ['ip','domain','hash'].forEach(type=>{
     document.getElementById('ref-'+type).innerHTML=SOURCES[type].map(s=>
-      `<a class="ref-link" href="${s.url('[IOC]')}" target="_blank">${extIco}${s.name}</a>`
+      `<a class="ref-link" href="${s.url('[IOC]')}" target="_blank" rel="noopener noreferrer">${extIco}${s.name}</a>`
     ).join('');
   });
 }
@@ -1603,7 +1603,7 @@ async function go(){
 // ═══════════════════════════════════════════════════
 function mkRefLinks(type, ioc){
   return SOURCES[type].map(s=>
-    `<a class="ref-link" href="${s.url(ioc)}" target="_blank">${extIco}${s.name}</a>`
+    `<a class="ref-link" href="${s.url(ioc)}" target="_blank" rel="noopener noreferrer">${extIco}${s.name}</a>`
   ).join('');
 }
 
@@ -1711,7 +1711,7 @@ function renderReport(ioc, type, d, cliente, req){
         <span class="src-badge sb-${s.v}">${badgeMap[s.v]}</span>
         <div class="src-detail-txt"><strong>${s.l}</strong> — ${s.d}</div>
         <div class="ref-links" style="margin-left:auto">
-          <a class="ref-link" href="${SOURCES[type].find(x=>x.name===s.n)?.url(ioc)||'#'}" target="_blank">${extIco}Ver →</a>
+          <a class="ref-link" href="${SOURCES[type].find(x=>x.name===s.n)?.url(ioc)||'#'}" target="_blank" rel="noopener noreferrer">${extIco}Ver →</a>
         </div>
       </div>`).join('')}
     </div>
@@ -1742,7 +1742,7 @@ function renderReport(ioc, type, d, cliente, req){
           <div class="mitre-id">${m.id}</div>
           <div class="mitre-name">${m.name}</div>
           <div class="mitre-desc">${m.desc}</div>
-          <a class="mitre-link" href="${m.url}" target="_blank">
+          <a class="mitre-link" href="${m.url}" target="_blank" rel="noopener noreferrer">
             ${extIco} Ver en MITRE
           </a>
         </div>`).join('')}
@@ -1811,6 +1811,7 @@ function exportHistoryCSV(){
   a.href = URL.createObjectURL(blob);
   a.download = `ioc-historial-${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
+  URL.revokeObjectURL(a.href);
   showToast('✓ CSV descargado');
 }
 
@@ -1825,11 +1826,11 @@ function exportReport(ioc, type, cliente, req){
   const rec      = sc.rec;
   const d        = sc.d;
 
-  const lastEntry = iocHistory[iocHistory.length-1];
-  const cli = lastEntry?.cliente||'';
-  const rq  = lastEntry?.req||'';
   const statusLabel={pen:'PENDIENTE',mon:'MONITOREANDO',blq:'BLOQUEADO',fp:'FALSO POSITIVO'};
-  const st  = statusLabel[lastEntry?.status||'pen'];
+  const cli = cliente||'';
+  const rq  = req||'';
+  const entry = iocHistory.slice().reverse().find(h=>h.ioc===ioc)||{};
+  const st  = statusLabel[entry.status||'pen'];
 
   let md = `# IOC Analysis Report\n\n`;
   md += `**IOC:** \`${ioc}\`  \n**Tipo:** ${type.toUpperCase()}  \n**Fecha:** ${today}  \n**Veredicto:** ${d.label} (${d.score} ${d.unit})\n`;
@@ -1877,6 +1878,7 @@ function exportReport(ioc, type, cliente, req){
     a.href = URL.createObjectURL(blob);
     a.download = `ioc-report-${ioc.replace(/[^a-z0-9]/gi,'-').slice(0,40)}-${today}.md`;
     a.click();
+    URL.revokeObjectURL(a.href);
   });
 }
 
@@ -1901,7 +1903,7 @@ function copyPrompt(){
       b.innerHTML='✓ COPIADO';
       setTimeout(()=>b.innerHTML=orig,2200);
     });
-  });
+  }).catch(()=>showToast('Error al copiar — intenta de nuevo'));
 }
 
 // ═══════════════════════════════════════════════════
@@ -1909,9 +1911,9 @@ function copyPrompt(){
 // ═══════════════════════════════════════════════════
 function defang(ioc){
   return ioc
+    .replace(/^(https?)/i, s=>s.replace(/^http/i,'hxxp'))
     .replace(/\./g,'[.]')
-    .replace(/^https?:\/\//i, s=>s.replace('://','[://]'))
-    .replace(/^(hxxps?)/i,'$1');
+    .replace('://','[://]');
 }
 
 function copyDefang(ioc){
@@ -1963,7 +1965,12 @@ function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function escAttr(s){
-  return String(s).replace(/'/g,"\\'");
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 
 // Toast notification
